@@ -206,7 +206,7 @@ commentend "*/"
         else{
             printf("exist\n");
         }
-        sprintf(pointer_to_scope,"0x%p",symtable);
+        sprintf(pointer_to_scope,"%p",symtable);
         DEBUG_FOR_LAB4("ID\t"+id1);
         strcpy(pointer_to_scope,"");
         offset+=strlen(yytext);
@@ -381,6 +381,7 @@ commentend "*/"
         DEBUG_FOR_LAB4("LBRACE\t{");
         offset++;
         symtable = new symTable(symtable);
+        sprintf(pointer_to_scope,"%p",symtable);
         level++;
     #else
         return LBRACE;
@@ -391,6 +392,7 @@ commentend "*/"
         DEBUG_FOR_LAB4("RBRACE\t}");
         offset++;
         symtable = symtable->getPrev();
+        sprintf(pointer_to_scope,"%p",symtable);
         level--;
     #else
         return RBRACE;
