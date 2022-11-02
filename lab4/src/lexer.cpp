@@ -877,10 +877,10 @@ YY_RULE_SETUP
 {
         #ifdef ONLY_FOR_LEX
             int len=strlen(yytext);
-            offset+=len;
             int n=strtol(yytext,NULL,8);
             string o=to_string(n);
             DEBUG_FOR_LAB4("OCTAL\t" + o);
+            offset+=len;
         #else
             return OCTAL;
         #endif
@@ -891,9 +891,11 @@ YY_RULE_SETUP
 #line 88 "src/lexer.l"
 {
         #ifdef ONLY_FOR_LEX
+            int len=strlen(yytext);
             int n=strtol(yytext,NULL,16);
             string h=to_string(n);
             DEBUG_FOR_LAB4("HEXADECIMIAL\t" + h);
+            offset+=len;
         #else
             return HEXADECIMIAL;
         #endif
@@ -901,7 +903,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 97 "src/lexer.l"
+#line 99 "src/lexer.l"
 {
     /*
     * Questions: 
@@ -918,7 +920,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 110 "src/lexer.l"
+#line 112 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("VOID\tvoid");
@@ -930,7 +932,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 118 "src/lexer.l"
+#line 120 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("IF\tif");
@@ -942,7 +944,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 126 "src/lexer.l"
+#line 128 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("ELSE\telse");
@@ -954,7 +956,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 134 "src/lexer.l"
+#line 136 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("RETURN\treturn");
@@ -966,7 +968,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 142 "src/lexer.l"
+#line 144 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("MAIN\tmain");
@@ -978,7 +980,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 150 "src/lexer.l"
+#line 152 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("WHILE\twhile");
@@ -990,7 +992,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 158 "src/lexer.l"
+#line 160 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("FLOAT\tfloat");
@@ -1002,7 +1004,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 166 "src/lexer.l"
+#line 168 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("DOUBLE\tdouble");
@@ -1014,7 +1016,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 174 "src/lexer.l"
+#line 176 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("BREAK\tbreak");
@@ -1026,7 +1028,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 182 "src/lexer.l"
+#line 184 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("CONTINUE\tcontinue");
@@ -1038,7 +1040,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 190 "src/lexer.l"
+#line 192 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         char* id = new char[strlen(yytext)+1];
@@ -1058,7 +1060,7 @@ YY_RULE_SETUP
         else{
             printf("exist\n");
         }
-        sprintf(pointer_to_scope,"0x%p",symtable);
+        sprintf(pointer_to_scope,"%p",symtable);
         DEBUG_FOR_LAB4("ID\t"+id1);
         strcpy(pointer_to_scope,"");
         offset+=strlen(yytext);
@@ -1070,7 +1072,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 219 "src/lexer.l"
+#line 221 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("ASSIGN\t=");
@@ -1082,7 +1084,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 227 "src/lexer.l"
+#line 229 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("LESS\t<");
@@ -1094,7 +1096,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 235 "src/lexer.l"
+#line 237 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("GREATER\t>");
@@ -1106,7 +1108,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 243 "src/lexer.l"
+#line 245 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("LEQUAL\t<=");
@@ -1118,7 +1120,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 251 "src/lexer.l"
+#line 253 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("GEQUAL\t<=");
@@ -1130,7 +1132,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 259 "src/lexer.l"
+#line 261 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("EQUAL\t<=");
@@ -1142,7 +1144,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 267 "src/lexer.l"
+#line 269 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("NEQUAL\t<=");
@@ -1154,7 +1156,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 275 "src/lexer.l"
+#line 277 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("ADD\t+");
@@ -1166,7 +1168,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 283 "src/lexer.l"
+#line 285 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("SUB\t-");
@@ -1178,7 +1180,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 291 "src/lexer.l"
+#line 293 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("MULT\t*");
@@ -1190,7 +1192,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 299 "src/lexer.l"
+#line 301 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("DEV\t/");
@@ -1202,7 +1204,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 307 "src/lexer.l"
+#line 309 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("MOD\t%");
@@ -1214,7 +1216,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 315 "src/lexer.l"
+#line 317 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("AND\t&&");
@@ -1226,7 +1228,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 323 "src/lexer.l"
+#line 325 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("OR\t||");
@@ -1238,7 +1240,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 331 "src/lexer.l"
+#line 333 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("NOT\t!");
@@ -1250,7 +1252,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 339 "src/lexer.l"
+#line 341 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("SEMICOLON\t;");
@@ -1262,7 +1264,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 347 "src/lexer.l"
+#line 349 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("LPAREN\t(");
@@ -1274,7 +1276,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 355 "src/lexer.l"
+#line 357 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("RPAREN\t)");
@@ -1286,7 +1288,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 363 "src/lexer.l"
+#line 365 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("LBRACK\t[");
@@ -1298,7 +1300,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 371 "src/lexer.l"
+#line 373 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("RBRACK\t]");
@@ -1310,7 +1312,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 379 "src/lexer.l"
+#line 381 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("LBRACE\t{");
@@ -1324,7 +1326,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 389 "src/lexer.l"
+#line 391 "src/lexer.l"
 {
     #ifdef ONLY_FOR_LEX
         DEBUG_FOR_LAB4("RBRACE\t}");
@@ -1339,20 +1341,20 @@ YY_RULE_SETUP
 case 42:
 /* rule 42 can match eol */
 YY_RULE_SETUP
-#line 400 "src/lexer.l"
+#line 402 "src/lexer.l"
 yylineno++;offset=0;
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 401 "src/lexer.l"
+#line 403 "src/lexer.l"
 offset++;
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 402 "src/lexer.l"
+#line 404 "src/lexer.l"
 ECHO;
 	YY_BREAK
-#line 1356 "src/lexer.cpp"
+#line 1358 "src/lexer.cpp"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(BLOCKCOMMENT):
 	yyterminate();
@@ -2358,7 +2360,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 402 "src/lexer.l"
+#line 404 "src/lexer.l"
 
 
 #ifdef ONLY_FOR_LEX

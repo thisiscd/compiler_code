@@ -77,19 +77,21 @@ commentend "*/"
 {OCTAL} {
         #ifdef ONLY_FOR_LEX
             int len=strlen(yytext);
-            offset+=len;
             int n=strtol(yytext,NULL,8);
             string o=to_string(n);
             DEBUG_FOR_LAB4("OCTAL\t" + o);
+            offset+=len;
         #else
             return OCTAL;
         #endif
 }
 {HEXADECIMIAL} {
         #ifdef ONLY_FOR_LEX
+            int len=strlen(yytext);
             int n=strtol(yytext,NULL,16);
             string h=to_string(n);
             DEBUG_FOR_LAB4("HEXADECIMIAL\t" + h);
+            offset+=len;
         #else
             return HEXADECIMIAL;
         #endif
@@ -381,7 +383,6 @@ commentend "*/"
         DEBUG_FOR_LAB4("LBRACE\t{");
         offset++;
         symtable = new symTable(symtable);
-        sprintf(pointer_to_scope,"%p",symtable);
         level++;
     #else
         return LBRACE;
@@ -392,7 +393,6 @@ commentend "*/"
         DEBUG_FOR_LAB4("RBRACE\t}");
         offset++;
         symtable = symtable->getPrev();
-        sprintf(pointer_to_scope,"%p",symtable);
         level--;
     #else
         return RBRACE;
