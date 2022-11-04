@@ -19,12 +19,32 @@
 %}
 
 DECIMIAL ([1-9][0-9]*|0)
+OCTAL [0]([1-7][0-7]*|0)
+HEXADECIMIAL  ((0x)[[:xdigit:]]*)
 ID [[:alpha:]_][[:alpha:][:digit:]_]*
 EOL (\r\n|\n|\r)
 WHITE [\t ]
+LINECOMMENT (\/\/[^\n]*)
+CHARACTER .
+
+commentbegin "/*"
+commentelement .|\n
+commentend "*/"
 %x BLOCKCOMMENT
 
+
 %%
+
+{commentbegin} {BEGIN BLOCKCOMMENT;}
+<BLOCKCOMMENT>{commentelement} {}
+<BLOCKCOMMENT>{commentend} {BEGIN INITIAL;}
+{LINECOMMENT}
+
+"const" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("CONST\tconst");
+    return CONST;
+}
 
 "int" {
     /*
@@ -98,10 +118,28 @@ WHITE [\t ]
     return RBRACE;
 }
 
+
+
 {DECIMIAL} {
     if(dump_tokens)
         DEBUG_FOR_LAB4(yytext);
     yylval.itype = atoi(yytext);
+    return INTEGER;
+}
+{OCTAL} {
+    int temp;
+    sscanf(yytext, "%o", &temp);
+    if(dump_tokens)
+        DEBUG_FOR_LAB4(yytext);
+    yylval.itype = temp;
+    return INTEGER;
+}
+{HEXADECIMIAL} {
+    int temp;
+    sscanf(yytext, "%x", &temp);
+    if(dump_tokens)
+        DEBUG_FOR_LAB4(yytext);
+    yylval.itype = temp;
     return INTEGER;
 }
 

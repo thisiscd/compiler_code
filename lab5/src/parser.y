@@ -29,8 +29,9 @@
 %token LPAREN RPAREN LBRACE RBRACE SEMICOLON
 %token ADD SUB OR AND LESS ASSIGN
 %token RETURN
+%token CONST
 
-%nterm <stmttype> Stmts Stmt AssignStmt BlockStmt IfStmt ReturnStmt DeclStmt FuncDef
+%nterm <stmttype> Stmts Stmt AssignStmt BlockStmt IfStmt ReturnStmt DeclStmt VarDeclStmt ConstDeclStmt FuncDef
 %nterm <exprtype> Exp AddExp Cond LOrExp PrimaryExp LVal RelExp LAndExp
 %nterm <type> Type
 
@@ -174,6 +175,10 @@ Type
     }
     ;
 DeclStmt
+    : VarDeclStmt { $$ = $1; }
+    | ConstDeclStmt { $$ = $1; }
+    ;
+VarDeclStmt
     :
     Type ID SEMICOLON {
         SymbolEntry *se;
@@ -183,6 +188,16 @@ DeclStmt
         delete []$2;
     }
     ;
+ConstDeclStmt
+    :
+    CONST Type ID SEMICOLON{
+        SymbolEntry *se;
+        se = new IdentifierSymbolEntry($2, $3, identifiers->getLevel());
+        se->setConst();
+        identifiers->install($3, se);
+        $$ = new DeclStmt(new Id(se));
+        delete []$2;
+    }
 FuncDef
     :
     Type ID {

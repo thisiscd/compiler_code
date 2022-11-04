@@ -10,6 +10,7 @@ class SymbolEntry
 {
 private:
     int kind;
+    bool constant;
 protected:
     enum {CONSTANT, VARIABLE, TEMPORARY};
     Type *type;
@@ -23,6 +24,7 @@ public:
     Type* getType() {return type;};
     virtual std::string toStr() = 0;
     // You can add any function you need here.
+    void setConst();
 };
 
 

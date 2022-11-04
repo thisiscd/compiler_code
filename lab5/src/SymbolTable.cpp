@@ -6,6 +6,7 @@ SymbolEntry::SymbolEntry(Type *type, int kind)
 {
     this->type = type;
     this->kind = kind;
+    this->constant=false;
 }
 
 ConstantSymbolEntry::ConstantSymbolEntry(Type *type, int value) : SymbolEntry(type, SymbolEntry::CONSTANT)
@@ -70,6 +71,18 @@ SymbolTable::SymbolTable(SymbolTable *prev)
 SymbolEntry* SymbolTable::lookup(std::string name)
 {
     // Todo
+    SymbolTable* table = this;
+    while(table!=nullptr)
+    {
+        if(table->symbolTable.find(name)!=table->symbolTable.end())
+        {
+            return table->symbolTable[name];
+        }
+        else
+        {
+            table=table->prev;
+        }
+    }
     return nullptr;
 }
 
@@ -77,6 +90,11 @@ SymbolEntry* SymbolTable::lookup(std::string name)
 void SymbolTable::install(std::string name, SymbolEntry* entry)
 {
     symbolTable[name] = entry;
+}
+
+void SymbolEntry::setConst()
+{
+    this->constant=true;
 }
 
 int SymbolTable::counter = 0;
