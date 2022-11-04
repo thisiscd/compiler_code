@@ -24,13 +24,24 @@ public:
     ExprNode(SymbolEntry *symbolEntry) : symbolEntry(symbolEntry){};
 };
 
+class UnaryExpr : public ExprNode
+{
+private:
+    int op;
+    ExprNode* expr;
+public:
+    enum {ADD, SUB, NOT};
+    UnaryExpr(SymbolEntry *se, int op, ExprNode* expr) : ExprNode(se), op(op), expr(expr){};
+    void output(int level);
+};
+
 class BinaryExpr : public ExprNode
 {
 private:
     int op;
     ExprNode *expr1, *expr2;
 public:
-    enum {ADD, SUB, AND, OR, LESS};
+    enum {ADD, SUB, MUL, DIV, MOD, AND, OR, LESS, GREATER, LESSEQUAL, GREATEREQUAL, EQUAL, NOTEQUAL};
     BinaryExpr(SymbolEntry *se, int op, ExprNode*expr1, ExprNode*expr2) : ExprNode(se), op(op), expr1(expr1), expr2(expr2){};
     void output(int level);
 };
@@ -97,6 +108,16 @@ private:
     StmtNode *elseStmt;
 public:
     IfElseStmt(ExprNode *cond, StmtNode *thenStmt, StmtNode *elseStmt) : cond(cond), thenStmt(thenStmt), elseStmt(elseStmt) {};
+    void output(int level);
+};
+
+class WhileStmt : public StmtNode
+{
+private:
+    ExprNode *cond;
+    StmtNode *Stmt;
+public:
+    WhileStmt(ExprNode *cond, StmtNode *Stmt) : cond(cond), Stmt(Stmt) {};
     void output(int level);
 };
 

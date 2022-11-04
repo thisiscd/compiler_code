@@ -71,12 +71,16 @@ commentend "*/"
         DEBUG_FOR_LAB4("ELSE\telse");
     return ELSE;
 };
+"while" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("WHILE\twhile");
+    return WHILE;
+}
 "return" {
     if(dump_tokens)
         DEBUG_FOR_LAB4("RETURN\treturn");
     return RETURN;
 }
-
 "=" {
     if(dump_tokens)
         DEBUG_FOR_LAB4("ASSIGN\t=");
@@ -91,6 +95,66 @@ commentend "*/"
     if(dump_tokens)
         DEBUG_FOR_LAB4("ADD\t+");
     return ADD;
+}
+"-" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("SUB\t-");
+    return SUB;
+}
+"*" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("MUL\t*");
+    return MUL;
+}
+"/" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("DIV\t/");
+    return DIV;
+}
+"%" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("MOD\t%");
+    return MOD;
+}
+">" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("GREATER\t>");
+    return GREATER;
+}
+">=" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("GREATEREQUAL\t>=");
+    return GREATEREQUAL;
+}
+"<=" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("LESSEQUAL\t<=");
+    return LESSEQUAL;
+}
+"==" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("EQUAL\t==");
+    return EQUAL;
+}
+"!=" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("NOTEQUAL\t!=");
+    return NOTEQUAL;
+}
+"&&" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("AND\t&&");
+    return AND;
+}
+"||" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("OR\t||");
+    return OR;
+}
+"!" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("NOT\t!");
+    return NOT;
 }
 ";" {
     if(dump_tokens)
