@@ -11,6 +11,19 @@ Node::Node()
     seq = counter++;
 }
 
+void Node::setNext(Node* next)
+{
+    Node* p = this;
+    while(p->getNext())
+    {
+        p = p->getNext();
+    }
+    if(p==this)
+        p->next=next;
+    else
+        p->setNext(next);
+}
+
 void Ast::output()
 {
     fprintf(yyout, "program\n");
@@ -100,11 +113,83 @@ void Id::output(int level)
 {
     std::string name, type;
     int scope;
+    bool inited;
+    int value;
+    inited = dynamic_cast<IdentifierSymbolEntry*>(symbolEntry)->inited; 
+    if(inited)
+    {
+        value = dynamic_cast<IdentifierSymbolEntry*>(symbolEntry)->getValue();
+    }
     name = symbolEntry->toStr();
     type = symbolEntry->getType()->toStr();
     scope = dynamic_cast<IdentifierSymbolEntry*>(symbolEntry)->getScope();
     fprintf(yyout, "%*cId\tname: %s\tscope: %d\ttype: %s\n", level, ' ',
             name.c_str(), scope, type.c_str());
+    
+    if(inited)
+    {
+        fprintf(yyout, "value: %d\n", value);
+    }
+    /*
+    else
+    {
+        fprintf(yyout, "value: uninitialized\n");
+    }
+    */
+}
+
+CallExpr::CallExpr(SymbolEntry* se, ExprNode* param/*=NULL*/): ExprNode(se), param(param){//有参函数调用
+    SymbolEntry* s = se;
+    int paramnum = 0;
+    ExprNode* temp = param;
+    while (temp) {
+        temp = (ExprNode*)(temp->getNext());
+        paramnum++;
+    }
+    std::vector<Type*> params;
+    while (s) {
+        Type* type = s->getType();
+        params.push_back(type);
+        s = s->getNext();
+    }
+    if(paramnum==0){
+        paramnum++;
+    }
+//    printf("%d, %d\n", paramnum, int(params.size()));
+    if ((long unsigned int)paramnum == params.size()) {
+        //this->symbolEntry = s;
+    }
+    else{
+        fprintf(stderr, "the %d %d count of params is wrong\n",int(paramnum),int(params.size()));
+    }
+    params.clear();
+};
+
+void ExprStmt::output(int level) 
+{
+    fprintf(yyout, "%*cExprStmt\n", level, ' ');
+    expr->output(level + 4);
+}
+
+void BlankStmt::output(int level) {
+    fprintf(yyout, "%*cBlankStmt\n", level, ' ');
+}
+
+void CallExpr::output(int level) {
+    std::string name, type;
+    int scope;
+    if (symbolEntry) {
+        name = symbolEntry->toStr();
+        type = symbolEntry->getType()->toStr();
+        scope = dynamic_cast<IdentifierSymbolEntry*>(symbolEntry)->getScope();
+
+        fprintf(yyout, "%*cCallExpr\tfunction name: %s\tscope: %d\ttype: %s\n", level, ' ', name.c_str(), scope, type.c_str());
+        Node* temp = param;//形参输出
+        while (temp) {
+            temp->output(level + 4);
+            temp = temp->getNext();
+        }
+    }
 }
 
 void CompoundStmt::output(int level)
@@ -124,6 +209,10 @@ void DeclStmt::output(int level)
 {
     fprintf(yyout, "%*cDeclStmt\n", level, ' ');
     id->output(level + 4);
+    
+    if (this->getNext()) {
+        this->getNext()->output(level);
+    }
 }
 
 void IfStmt::output(int level)

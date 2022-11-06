@@ -6,7 +6,25 @@ SymbolEntry::SymbolEntry(Type *type, int kind)
 {
     this->type = type;
     this->kind = kind;
-    this->constant=false;
+    this->next=nullptr;
+}
+
+bool SymbolEntry::setNext(SymbolEntry* se)
+{
+    SymbolEntry* s = this;
+    while (s->getNext()) 
+    {
+        s = s->getNext();
+    }
+    if (s == this)
+    {
+        this->next = se;
+    }
+    else 
+    {
+        s->setNext(se);
+    }
+    return true;
 }
 
 ConstantSymbolEntry::ConstantSymbolEntry(Type *type, int value) : SymbolEntry(type, SymbolEntry::CONSTANT)
@@ -24,12 +42,32 @@ std::string ConstantSymbolEntry::toStr()
 IdentifierSymbolEntry::IdentifierSymbolEntry(Type *type, std::string name, int scope) : SymbolEntry(type, SymbolEntry::VARIABLE), name(name)
 {
     this->scope = scope;
+    this->constant=false;
+    this->inited=false;
+}
+
+bool IdentifierSymbolEntry::setValue(int value)
+{
+    this->value=value;
+    return true;
+}
+
+int IdentifierSymbolEntry::getValue()
+{
+    return this->value;
 }
 
 std::string IdentifierSymbolEntry::toStr()
 {
     return name;
 }
+
+//
+void IdentifierSymbolEntry::setConst()
+{
+    this->constant=true;
+}
+
 
 TemporarySymbolEntry::TemporarySymbolEntry(Type *type, int label) : SymbolEntry(type, SymbolEntry::TEMPORARY)
 {
@@ -90,11 +128,6 @@ SymbolEntry* SymbolTable::lookup(std::string name)
 void SymbolTable::install(std::string name, SymbolEntry* entry)
 {
     symbolTable[name] = entry;
-}
-
-void SymbolEntry::setConst()
-{
-    this->constant=true;
 }
 
 int SymbolTable::counter = 0;

@@ -10,10 +10,10 @@ class SymbolEntry
 {
 private:
     int kind;
-    bool constant;
 protected:
     enum {CONSTANT, VARIABLE, TEMPORARY};
     Type *type;
+    SymbolEntry* next;
 
 public:
     SymbolEntry(Type *type, int kind);
@@ -24,7 +24,8 @@ public:
     Type* getType() {return type;};
     virtual std::string toStr() = 0;
     // You can add any function you need here.
-    void setConst();
+    SymbolEntry* getNext() const { return next; };
+    bool setNext(SymbolEntry* se);
 };
 
 
@@ -78,6 +79,8 @@ private:
     std::string name;
     int scope;
     // You can add any field you need here.
+    bool constant;
+    int value;
 
 public:
     IdentifierSymbolEntry(Type *type, std::string name, int scope);
@@ -85,6 +88,10 @@ public:
     std::string toStr();
     int getScope() const {return scope;};
     // You can add any function you need here.
+    bool inited;
+    void setConst();
+    int getValue();
+    bool setValue(int value);
 };
 
 

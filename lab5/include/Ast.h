@@ -10,9 +10,12 @@ class Node
 private:
     static int counter;
     int seq;
+    Node* next;
 public:
     Node();
     int getSeq() const {return seq;};
+    Node* getNext(){return next;};
+    void setNext(Node* next);
     virtual void output(int level) = 0;
 };
 
@@ -32,6 +35,15 @@ private:
 public:
     enum {ADD, SUB, NOT};
     UnaryExpr(SymbolEntry *se, int op, ExprNode* expr) : ExprNode(se), op(op), expr(expr){};
+    void output(int level);
+};
+
+class CallExpr : public ExprNode 
+{
+private:
+    ExprNode* param;
+public:
+    CallExpr(SymbolEntry* se, ExprNode* param=NULL);
     void output(int level);
 };
 
@@ -62,6 +74,21 @@ public:
 
 class StmtNode : public Node
 {};
+
+class ExprStmt : public StmtNode {
+   private:
+    ExprNode* expr;
+
+   public:
+    ExprStmt(ExprNode* expr) : expr(expr){};
+    void output(int level);
+};
+
+class BlankStmt : public StmtNode {
+   public:
+    BlankStmt(){};
+    void output(int level);
+};
 
 class CompoundStmt : public StmtNode
 {
