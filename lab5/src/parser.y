@@ -305,17 +305,27 @@ VarDef
     ID{
         SymbolEntry* se;
         se = new IdentifierSymbolEntry(declType, $1, identifiers->getLevel());
-        identifiers->install($1, se);
-        $$ = new DeclStmt(new Id(se));
+        if(!identifiers->lookup($1)){
+            identifiers->install($1, se);
+            $$ = new DeclStmt(new Id(se));
+        }
+        else{
+            printf("ID exits\n");
+        }
         delete []$1;
     }
     |
      ID ASSIGN Exp {
         SymbolEntry *se;
         se = new IdentifierSymbolEntry(declType, $1, identifiers->getLevel());
-//        ((IdentifierSymbolEntry*)se)->setValue($3->getValueI());
-        identifiers->install($1, se);
-        $$ = new DeclStmt(new Id(se));
+//        ((IdentifierSymbolEntry*)se)->setValue($3->getValue());
+        if(!identifiers->lookup($1)){
+            identifiers->install($1, se);
+            $$ = new DeclStmt(new Id(se));
+        }
+        else{
+            printf("ID exits\n");
+        }
         delete []$1;
      }
      ;
@@ -336,20 +346,17 @@ VarDeclStmt
     ;
 ConstDef
     :
-    ID{
-        IdentifierSymbolEntry *se;
-        se = new IdentifierSymbolEntry(declType, $1, identifiers->getLevel());
-        se->setConst();
-        identifiers->install($1, se);
-        $$ = new DeclStmt(new Id(se));
-    }
-    |
      ID ASSIGN Exp {
         IdentifierSymbolEntry *se;
         se = new IdentifierSymbolEntry(declType, $1, identifiers->getLevel());
         se->setConst();
-        identifiers->install($1, se);
-        $$ = new DeclStmt(new Id(se));
+        if(!identifiers->lookup($1)){
+            identifiers->install($1, se);
+            $$ = new DeclStmt(new Id(se));
+        }
+        else{
+            printf("ID exits\n");
+        }
      }
      ;
 ConstDefList
