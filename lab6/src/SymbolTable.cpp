@@ -6,6 +6,25 @@ SymbolEntry::SymbolEntry(Type *type, int kind)
 {
     this->type = type;
     this->kind = kind;
+    this->next=nullptr;
+}
+
+bool SymbolEntry::setNext(SymbolEntry* se)
+{
+    SymbolEntry* s = this;
+    while (s->getNext()) 
+    {
+        s = s->getNext();
+    }
+    if (s == this)
+    {
+        this->next = se;
+    }
+    else 
+    {
+        s->setNext(se);
+    }
+    return true;
 }
 
 ConstantSymbolEntry::ConstantSymbolEntry(Type *type, int value) : SymbolEntry(type, SymbolEntry::CONSTANT)
@@ -24,12 +43,32 @@ IdentifierSymbolEntry::IdentifierSymbolEntry(Type *type, std::string name, int s
 {
     this->scope = scope;
     addr = nullptr;
+    this->constant=false;
+    this->inited=false;
+}
+
+bool IdentifierSymbolEntry::setValue(int value)
+{
+    this->value=value;
+    return true;
+}
+
+int IdentifierSymbolEntry::getValue()
+{
+    return this->value;
 }
 
 std::string IdentifierSymbolEntry::toStr()
 {
     return "@" + name;
 }
+
+//
+void IdentifierSymbolEntry::setConst()
+{
+    this->constant=true;
+}
+
 
 TemporarySymbolEntry::TemporarySymbolEntry(Type *type, int label) : SymbolEntry(type, SymbolEntry::TEMPORARY)
 {
@@ -71,6 +110,18 @@ SymbolTable::SymbolTable(SymbolTable *prev)
 SymbolEntry* SymbolTable::lookup(std::string name)
 {
     // Todo
+    SymbolTable* table = this;
+    while(table!=nullptr)
+    {
+        if(table->symbolTable.find(name)!=table->symbolTable.end())
+        {
+            return table->symbolTable[name];
+        }
+        else
+        {
+            table=table->prev;
+        }
+    }
     return nullptr;
 }
 

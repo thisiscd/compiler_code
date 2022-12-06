@@ -11,9 +11,11 @@ class SymbolEntry
 {
 private:
     int kind;
+    bool constant;
 protected:
     enum {CONSTANT, VARIABLE, TEMPORARY};
     Type *type;
+    SymbolEntry* next;
 
 public:
     SymbolEntry(Type *type, int kind);
@@ -25,6 +27,8 @@ public:
     void setType(Type *type) {this->type = type;};
     virtual std::string toStr() = 0;
     // You can add any function you need here.
+    SymbolEntry* getNext() const { return next; };
+    bool setNext(SymbolEntry* se);
 };
 
 
@@ -79,6 +83,8 @@ private:
     int scope;
     Operand *addr;  // The address of the identifier.
     // You can add any field you need here.
+    bool constant;
+    int value;
 
 public:
     IdentifierSymbolEntry(Type *type, std::string name, int scope);
@@ -91,6 +97,10 @@ public:
     void setAddr(Operand *addr) {this->addr = addr;};
     Operand* getAddr() {return addr;};
     // You can add any function you need here.
+    bool inited;
+    void setConst();
+    int getValue();
+    bool setValue(int value);
 };
 
 

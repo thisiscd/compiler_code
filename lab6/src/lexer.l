@@ -19,12 +19,32 @@
 %}
 
 DECIMIAL ([1-9][0-9]*|0)
+OCTAL [0]([1-7][0-7]*|0)
+HEXADECIMIAL  ((0x)[[:xdigit:]]*)
 ID [[:alpha:]_][[:alpha:][:digit:]_]*
 EOL (\r\n|\n|\r)
 WHITE [\t ]
+LINECOMMENT (\/\/[^\n]*)
+CHARACTER .
+
+commentbegin "/*"
+commentelement .|\n
+commentend "*/"
 %x BLOCKCOMMENT
 
+
 %%
+
+{commentbegin} {BEGIN BLOCKCOMMENT;}
+<BLOCKCOMMENT>{commentelement} {}
+<BLOCKCOMMENT>{commentend} {BEGIN INITIAL;}
+{LINECOMMENT}
+
+"const" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("CONST\tconst");
+    return CONST;
+}
 
 "int" {
     /*
@@ -46,6 +66,7 @@ WHITE [\t ]
         DEBUG_FOR_LAB4("IF\tif");
     return IF;
 };
+
 "else" {
     if(dump_tokens)
         DEBUG_FOR_LAB4("ELSE\telse");
@@ -56,13 +77,26 @@ WHITE [\t ]
         DEBUG_FOR_LAB4("RETURN\treturn");
     return RETURN;
 }
-
+"while" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("WHILE\twhile");
+    return WHILE;
+}
 "&&" {
     if(dump_tokens)
         DEBUG_FOR_LAB4("AND\t=");
     return AND;
 }
-
+"||" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("OR\t||");
+    return OR;
+}
+"!" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("NOT\t!");
+    return NOT;
+}
 "=" {
     if(dump_tokens)
         DEBUG_FOR_LAB4("ASSIGN\t=");
@@ -72,6 +106,56 @@ WHITE [\t ]
     if(dump_tokens)
         DEBUG_FOR_LAB4("LESS\t<");
     return LESS;
+}
+"+" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("ADD\t+");
+    return ADD;
+}
+"-" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("SUB\t-");
+    return SUB;
+}
+"*" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("MUL\t*");
+    return MUL;
+}
+"/" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("DIV\t/");
+    return DIV;
+}
+"%" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("MOD\t%");
+    return MOD;
+}
+">" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("GREATER\t>");
+    return GREATER;
+}
+">=" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("GREATEREQUAL\t>=");
+    return GREATEREQUAL;
+}
+"<=" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("LESSEQUAL\t<=");
+    return LESSEQUAL;
+}
+"==" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("EQUAL\t==");
+    return EQUAL;
+}
+"!=" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("NOTEQUAL\t!=");
+    return NOTEQUAL;
 }
 "+" {
     if(dump_tokens)
@@ -103,12 +187,84 @@ WHITE [\t ]
         DEBUG_FOR_LAB4("RBRACE\t}");
     return RBRACE;
 }
+"," {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("COMMA\t}");
+    return COMMA;
+}
+
+
 
 {DECIMIAL} {
     if(dump_tokens)
         DEBUG_FOR_LAB4(yytext);
     yylval.itype = atoi(yytext);
     return INTEGER;
+}
+{OCTAL} {
+    int temp;
+    sscanf(yytext, "%o", &temp);
+    if(dump_tokens)
+        DEBUG_FOR_LAB4(yytext);
+    yylval.itype = temp;
+    return INTEGER;
+}
+{HEXADECIMIAL} {
+    int temp;
+    sscanf(yytext, "%x", &temp);
+    if(dump_tokens)
+        DEBUG_FOR_LAB4(yytext);
+    yylval.itype = temp;
+    return INTEGER;
+}
+
+"getint" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4(yytext);
+    char* str=new char[strlen(yytext)+1];
+    strcpy(str,yytext);
+    yylval.strtype=str;
+    std::vector<Type*> vec;
+    Type* funcType = new FunctionType(TypeSystem::intType, vec);
+    SymbolTable* st = identifiers;
+    while(st->getPrev())
+        st = st->getPrev();
+    SymbolEntry* se = new IdentifierSymbolEntry(funcType, yytext, st->getLevel());
+    if(!(st->lookup(yytext)))
+    st->install(yytext, se);
+    return ID;
+}
+"putint" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4(yytext);
+    char* str=new char[strlen(yytext)+1];
+    strcpy(str,yytext);
+    yylval.strtype=str;
+    std::vector<Type*> vec;
+    Type* funcType = new FunctionType(TypeSystem::intType, vec);
+    SymbolTable* st = identifiers;
+    while(st->getPrev())
+        st = st->getPrev();
+    SymbolEntry* se = new IdentifierSymbolEntry(funcType, yytext, st->getLevel());
+    if(!(st->lookup(yytext)))
+        st->install(yytext, se);
+    return ID;
+}
+"putch" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4(yytext);
+    char* str=new char[strlen(yytext)+1];
+    strcpy(str,yytext);
+    yylval.strtype=str;
+    std::vector<Type*> vec;
+    Type* funcType = new FunctionType(TypeSystem::intType, vec);
+    SymbolTable* st = identifiers;
+    while(st->getPrev())
+        st = st->getPrev();
+    SymbolEntry* se = new IdentifierSymbolEntry(funcType, yytext, st->getLevel());
+    if(!(st->lookup(yytext)))
+        st->install(yytext, se);
+    return ID;
 }
 
 {ID} {

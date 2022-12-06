@@ -45,7 +45,6 @@ commentend "*/"
         DEBUG_FOR_LAB4("CONST\tconst");
     return CONST;
 }
-
 "int" {
     /*
     * Questions: 
