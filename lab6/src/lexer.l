@@ -157,11 +157,6 @@ commentend "*/"
         DEBUG_FOR_LAB4("NOTEQUAL\t!=");
     return NOTEQUAL;
 }
-"+" {
-    if(dump_tokens)
-        DEBUG_FOR_LAB4("ADD\t+");
-    return ADD;
-}
 ";" {
     if(dump_tokens)
         DEBUG_FOR_LAB4("SEMICOLON\t;");

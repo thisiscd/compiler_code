@@ -208,14 +208,9 @@ void AssignStmt::genCode()
 }
 
 // self define
-
 void ExprStmt::genCode() 
 {
     // Todo
-}
-bool ExprStmt::typeCheck(Type* retType) {
-    // Todo
-    return false;
 }
 void CallExpr::genCode() 
 {
@@ -230,13 +225,15 @@ void BlankStmt::genCode() {
 void WhileStmt::genCode() {
     // Todo
 }
+bool ExprStmt::typeCheck(Type* retType) {
+    // Todo
+    return false;
+}
 bool WhileStmt::typeCheck(Type* retType) {
-
     // Todo
     return false;
 }
 bool CallExpr::typeCheck(Type* retType) {
-
     // Todo
     return false;
 }
@@ -255,61 +252,73 @@ bool Ast::typeCheck(Type* retType)
 {
     if(root != nullptr)
         root->typeCheck();
+    return false;
 }
 
 bool FunctionDef::typeCheck(Type* retType)
 {
     // Todo
+    return false;
 }
 
 bool BinaryExpr::typeCheck(Type* retType)
 {
     // Todo
+    return false;
 }
 
 bool Constant::typeCheck(Type* retType)
 {
     // Todo
+    return false;
 }
 
 bool Id::typeCheck(Type* retType)
 {
     // Todo
+    return false;
 }
 
 bool IfStmt::typeCheck(Type* retType)
 {
     // Todo
+    return false;
 }
 
 bool IfElseStmt::typeCheck(Type* retType)
 {
     // Todo
+    return false;
 }
 
 bool CompoundStmt::typeCheck(Type* retType)
 {
     // Todo
+    return false;
 }
 
 bool SeqNode::typeCheck(Type* retType)
 {
     // Todo
+    return false;
 }
 
 bool DeclStmt::typeCheck(Type* retType)
 {
     // Todo
+    return false;
 }
 
 bool ReturnStmt::typeCheck(Type* retType)
 {
     // Todo
+    return false;
 }
 
 bool AssignStmt::typeCheck(Type* retType)
 {
     // Todo
+    return false;
 }
 
 

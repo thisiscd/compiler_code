@@ -46,10 +46,6 @@ public:
     ExprNode(SymbolEntry *symbolEntry) : symbolEntry(symbolEntry){};
     Operand* getOperand() {return dst;};
     SymbolEntry* getSymPtr() {return symbolEntry;};
-
-    void output(int level);
-    virtual bool typeCheck(Type* retType = nullptr) { return false; };
-    void genCode();
 };
 
 class UnaryExpr : public ExprNode
