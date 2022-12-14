@@ -81,14 +81,23 @@ void BinaryInstruction::output() const
     type = operands[0]->getType()->toStr();
     switch (opcode)
     {
-    case ADD:
-        op = "add";
-        break;
-    case SUB:
-        op = "sub";
-        break;
-    default:
-        break;
+        case ADD:
+            op = "add";
+            break;
+        case SUB:
+            op = "sub";
+            break;
+        case MUL:
+            op = "mul";
+            break;
+        case DIV:
+            op = "sdiv";
+            break;
+        case MOD:
+            op = "srem";
+            break;
+        default:
+            break;
     }
     fprintf(yyout, "  %s = %s %s %s, %s\n", s1.c_str(), op.c_str(), type.c_str(), s2.c_str(), s3.c_str());
 }
@@ -310,4 +319,53 @@ void StoreInstruction::output() const
     std::string src_type = operands[1]->getType()->toStr();
 
     fprintf(yyout, "  store %s %s, %s %s, align 4\n", src_type.c_str(), src.c_str(), dst_type.c_str(), dst.c_str());
+}
+
+// add 
+CallInstruction::CallInstruction(Operand* dst, SymbolEntry* func, 
+                    std::vector<Operand*> params, 
+                    BasicBlock* insert_bb)
+                : Instruction(CALL, insert_bb), func(func), dst(dst) 
+{
+    operands.push_back(dst);
+    if (dst)
+    {
+        dst->setDef(this);
+    }
+    for (auto param : params) 
+    {
+        operands.push_back(param);
+        param->addUse(this);
+    }
+    
+}
+
+void CallInstruction::output() const
+{
+    fprintf(yyout, "  ");
+    if (operands[0])
+        fprintf(yyout, "%s = ", operands[0]->toStr().c_str());
+    FunctionType* type = (FunctionType*)(func->getType());
+    fprintf(yyout, "call %s %s(", type->getRetType()->toStr().c_str(),
+            func->toStr().c_str());
+    for (long unsigned int i = 1; i < operands.size(); i++) 
+    {
+        if (i != 1)
+            fprintf(yyout, ", ");
+        fprintf(yyout, "%s %s", operands[i]->getType()->toStr().c_str(),
+                operands[i]->toStr().c_str());
+    }
+    fprintf(yyout, ")\n");
+}
+
+CallInstruction::~CallInstruction()
+{
+    if (operands[0]) 
+    {
+        operands[0]->setDef(nullptr);
+        if (operands[0]->usersNum() == 0)
+            delete operands[0];
+    }
+    for (long unsigned int i = 1; i < operands.size(); i++)
+        operands[i]->removeUse(this);
 }
