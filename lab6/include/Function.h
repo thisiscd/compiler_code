@@ -22,6 +22,8 @@ private:
     BasicBlock *entry;
     Unit *parent;
 
+    std::vector<Operand *> params;//参数列表
+    
 public:
     Function(Unit *, SymbolEntry *);
     ~Function();

@@ -162,6 +162,16 @@ void BinaryExpr::genCode()
             break;
         }
         new CmpInstruction(cmpcode, dst, src1, src2, bb);
+
+        // need modify
+        BasicBlock *truebb, *falsebb, *tempbb;
+        //临时假块
+        truebb = new BasicBlock(func);
+        falsebb = new BasicBlock(func);
+        tempbb = new BasicBlock(func);
+
+        true_list.push_back(new CondBrInstruction(truebb, tempbb, dst, bb));
+        false_list.push_back(new UncondBrInstruction(falsebb, tempbb));
     }
 }
 
@@ -210,6 +220,18 @@ void IfElseStmt::genCode()
     else_bb = new BasicBlock(func);
     end_bb = new BasicBlock(func);
 
+    //设置各种前驱后继
+    then_bb -> addPred(builder -> getInsertBB());
+    builder -> getInsertBB() -> addSucc(then_bb);
+
+    else_bb -> addPred(builder -> getInsertBB());
+    builder -> getInsertBB() -> addSucc(else_bb);
+
+    end_bb -> addPred(then_bb);
+    then_bb -> addSucc(end_bb);
+    end_bb -> addPred(else_bb);
+    else_bb -> addSucc(end_bb);
+
     cond->genCode();
     backPatch(cond->trueList(),then_bb);
     backPatch(cond->falseList(),else_bb);
@@ -239,12 +261,10 @@ void CompoundStmt::genCode()
 void SeqNode::genCode()
 {
     // Todo
-    
     if(stmt1 != nullptr)
         stmt1->genCode();
     if(stmt2 != nullptr)
         stmt2->genCode();
-    
 }
 
 void DeclStmt::genCode()
@@ -323,33 +343,51 @@ void CallExpr::genCode()
 void UnaryExpr::genCode()
 {
     // Todo
-    expr->genCode();
-    if (op == NOT) {
     BasicBlock* bb = builder->getInsertBB();
-    Operand* src = expr->getOperand();
-    if (expr->getOperand()->getType()) {  // FIXME: not i1
-        Operand* temp = new Operand(new TemporarySymbolEntry(
-            TypeSystem::boolType, SymbolTable::getLabel()));
-        new CmpInstruction(
-            CmpInstruction::NE, temp, src,
-            new Operand(new ConstantSymbolEntry(TypeSystem::intType, 0)),
-            bb);
-        src = temp;
-    }
-    //new XorInstruction(dst, src, bb);
-    } else if (op == SUB) {
-        Operand* src2;
-        BasicBlock* bb = builder->getInsertBB();
+    if (op == NOT) 
+    {
+        expr->genCode();
+        Operand* src = expr->getOperand();
+        if (!expr->getOperand()->getType()->isBool()) 
+        {
+            Operand* temp = new Operand(new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel()));
+            new CmpInstruction(CmpInstruction::NE, temp, src, new Operand(new ConstantSymbolEntry(TypeSystem::intType, 0)), bb);
+            src = temp;
+        }
+        new XorInstruction(dst, src, bb);
+    } 
+    else if (op == SUB || op == ADD) 
+    {
+        expr->genCode();
         Operand* src1 = new Operand(new ConstantSymbolEntry(dst->getType(), 0));
-        // if (expr->getType()->getSize() == 1) {
-        //     src2 = new Operand(new TemporarySymbolEntry(
-        //         TypeSystem::intType, SymbolTable::getLabel()));
-        //     new ZextInstruction(src2, expr->getOperand(), bb);
-        // } else
-        //     src2 = expr->getOperand();
-        new BinaryInstruction(BinaryInstruction::SUB, dst, src1, src2, bb);
+
+        Operand* temp = new Operand(new TemporarySymbolEntry(TypeSystem::intType,SymbolTable::getLabel()));
+        Operand* src2 = expr->getOperand();
+
+        // to complete
+        if (expr->getOperand()->getType() == TypeSystem::boolType) 
+        {
+            Operand* temp =new Operand(new TemporarySymbolEntry(TypeSystem::intType,SymbolTable::getLabel()));
+            new ZextInstruction(temp, expr->dst,bb); 
+            expr->dst = temp;   
+            src2 = temp; 
+        }
+        int opcode;
+        switch (op)
+        {
+        case ADD:
+            opcode = BinaryInstruction::ADD;
+            break;
+        case SUB:
+            opcode = BinaryInstruction::SUB;
+            break;
+        default:
+            break;
+        }
+        new BinaryInstruction(opcode, dst, src1, src2, bb);
     }
 }
+
 void BlankStmt::genCode()
 {
     // Todo
@@ -395,6 +433,12 @@ void WhileStmt::genCode()
 
     builder->setInsertBB(end_bb);
 }
+
+void BreakStmt::genCode(){}
+void ContinueStmt::genCode(){}
+void BreakStmt::typeCheck(){}
+void ContinueStmt::typeCheck(){}
+
 void ExprStmt::typeCheck()
 {
     // Todo 
@@ -819,4 +863,14 @@ void FunctionDef::output(int level)
     fprintf(yyout, "%*cFunctionDefine function name: %s, type: %s\n", level, ' ',
             name.c_str(), type.c_str());
     stmt->output(level + 4);
+}
+
+void BreakStmt::output(int level)
+{
+    fprintf(yyout, "%*cBreakStmt\n", level, ' ');
+}
+
+void ContinueStmt::output(int level)
+{
+    fprintf(yyout, "%*cContinueStmt\n", level, ' ');
 }

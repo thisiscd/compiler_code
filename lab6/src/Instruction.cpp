@@ -369,3 +369,29 @@ CallInstruction::~CallInstruction()
     for (long unsigned int i = 1; i < operands.size(); i++)
         operands[i]->removeUse(this);
 }
+
+ZextInstruction::ZextInstruction(Operand* dst,Operand* src,BasicBlock *insert_bb):Instruction(ZEXT,insert_bb){
+    operands.push_back(dst);
+    operands.push_back(src);
+    dst->setDef(this);
+    src->addUse(this);
+}
+
+void ZextInstruction::output() const{
+    std::string dst = operands[0]->toStr();
+    std::string src = operands[1]->toStr();
+    fprintf(yyout,"  %s = zext i1 %s to i32\n",dst.c_str(),src.c_str());
+}
+
+XorInstruction::XorInstruction(Operand* dst,Operand* src,BasicBlock *insert_bb):Instruction(XOR,insert_bb){
+    operands.push_back(dst);
+    operands.push_back(src);
+    dst->setDef(this);
+    src->addUse(this);
+}
+
+void XorInstruction::output() const{
+    std::string dst = operands[0]->toStr();
+    std::string src = operands[1]->toStr();
+    fprintf(yyout,"  %s = xor i1 %s, true\n",dst.c_str(),src.c_str());
+}

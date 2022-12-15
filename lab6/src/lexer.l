@@ -82,6 +82,16 @@ commentend "*/"
         DEBUG_FOR_LAB4("WHILE\twhile");
     return WHILE;
 }
+"break" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("BREAK\tbreak");
+    return BREAK;
+}
+"continue" {
+    if(dump_tokens)
+        DEBUG_FOR_LAB4("CONTINUE\tcontinue");
+    return CONTINUE;
+}
 "&&" {
     if(dump_tokens)
         DEBUG_FOR_LAB4("AND\t=");

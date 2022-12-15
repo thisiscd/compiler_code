@@ -8,7 +8,7 @@ class Type
 private:
     int kind;
 protected:
-    enum {INT, VOID, FUNC, PTR};
+    enum {INT, VOID, FUNC, PTR, BOOL};
 public:
     Type(int kind) : kind(kind) {};
     virtual ~Type() {};
@@ -16,6 +16,7 @@ public:
     bool isInt() const {return kind == INT;};
     bool isVoid() const {return kind == VOID;};
     bool isFunc() const {return kind == FUNC;};
+    bool isBool() const {return kind == BOOL;};
 };
 
 class IntType : public Type

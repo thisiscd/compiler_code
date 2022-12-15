@@ -41,8 +41,9 @@ class ExprNode : public Node
 {
 protected:
     SymbolEntry *symbolEntry;
-    Operand *dst;   // The result of the subtree is stored into dst.
+    
 public:
+    Operand *dst;   // The result of the subtree is stored into dst.
     ExprNode(SymbolEntry *symbolEntry) : symbolEntry(symbolEntry){};
     Operand* getOperand() {return dst;};
     SymbolEntry* getSymPtr() {return symbolEntry;};
@@ -81,7 +82,7 @@ private:
     ExprNode *expr1, *expr2;
 public:
     enum {ADD, SUB, MUL, DIV, MOD, AND, OR, LESS, GREATER, LESSEQUAL, GREATEREQUAL, EQUAL, NOTEQUAL};
-    BinaryExpr(SymbolEntry *se, int op, ExprNode*expr1, ExprNode*expr2) : ExprNode(se), op(op), expr1(expr1), expr2(expr2){};
+    BinaryExpr(SymbolEntry *se, int op, ExprNode*expr1, ExprNode*expr2) : ExprNode(se), op(op), expr1(expr1), expr2(expr2){dst = new Operand(se);}; // new dst
 
     void output(int level);
     void typeCheck();
@@ -264,6 +265,24 @@ public:
     void output();
     void typeCheck();
     void genCode(Unit *unit);
+};
+
+class BreakStmt : public StmtNode
+{
+public:
+    BreakStmt() {};
+    void output(int level);
+    void typeCheck();
+    void genCode();
+};
+
+class ContinueStmt : public StmtNode
+{
+public:
+    ContinueStmt() {};
+    void output(int level);
+    void typeCheck();
+    void genCode();
 };
 
 #endif
