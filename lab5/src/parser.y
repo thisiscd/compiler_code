@@ -349,6 +349,7 @@ ConstDef
      ID ASSIGN Exp {
         IdentifierSymbolEntry *se;
         se = new IdentifierSymbolEntry(declType, $1, identifiers->getLevel());
+        printf("scope: %d\n", identifiers->getLevel());
         se->setConst();
         if(!identifiers->lookup($1)){
             identifiers->install($1, se);

@@ -3,6 +3,7 @@
 
 #include <fstream>
 #include "Operand.h"
+#include "Type.h"
 
 class SymbolEntry;
 class Unit;
@@ -22,7 +23,8 @@ protected:
     std::vector<Instruction*> false_list;
     static IRBuilder *builder;
     void backPatch(std::vector<Instruction*> &list, BasicBlock*bb);
-    std::vector<Instruction*> merge(std::vector<Instruction*> &list1, std::vector<Instruction*> &list2);
+    void backPatchFalse(std::vector<Instruction *> &list, BasicBlock *bb);
+    std::vector<Instruction *> merge(std::vector<Instruction *> &list1, std::vector<Instruction *> &list2);
 
 public:
     Node();
@@ -44,9 +46,14 @@ protected:
     
 public:
     Operand *dst;   // The result of the subtree is stored into dst.
-    ExprNode(SymbolEntry *symbolEntry) : symbolEntry(symbolEntry){};
+    ExprNode(SymbolEntry *symbolEntry) : symbolEntry(symbolEntry){dst=new Operand(symbolEntry);};
     Operand* getOperand() {return dst;};
     SymbolEntry* getSymPtr() {return symbolEntry;};
+    // 
+    void int2Bool(){
+        symbolEntry = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
+        dst = new Operand(symbolEntry);
+    }
 };
 
 class UnaryExpr : public ExprNode
@@ -82,7 +89,7 @@ private:
     ExprNode *expr1, *expr2;
 public:
     enum {ADD, SUB, MUL, DIV, MOD, AND, OR, LESS, GREATER, LESSEQUAL, GREATEREQUAL, EQUAL, NOTEQUAL};
-    BinaryExpr(SymbolEntry *se, int op, ExprNode*expr1, ExprNode*expr2) : ExprNode(se), op(op), expr1(expr1), expr2(expr2){dst = new Operand(se);}; // new dst
+    BinaryExpr(SymbolEntry *se, int op, ExprNode*expr1, ExprNode*expr2) : ExprNode(se), op(op), expr1(expr1), expr2(expr2){}; // new dst
 
     void output(int level);
     void typeCheck();
@@ -160,13 +167,41 @@ public:
     void genCode();
 };
 
+class AssignStmt : public StmtNode
+{
+private:
+public:
+    ExprNode *lval;
+    ExprNode *expr;
+    AssignStmt(ExprNode *lval, ExprNode *expr) : lval(lval), expr(expr) {};
+
+    void output(int level);
+    void typeCheck();
+    void genCode();
+};
+
+class ListNode : public Node//序列型变量类
+{};
+
+//标识符列表
+class IdList:public ListNode
+{
+//private:
+public:
+    std::vector<Id*> idlist;//标识符串
+    std::vector<AssignStmt*> assignlist;//声明时直接赋值
+    IdList(std::vector<Id*>idlist,std::vector<AssignStmt*>ass):idlist(idlist),assignlist(ass){};
+    void output(int level);
+    void typeCheck();
+    void genCode();
+};
+
 class DeclStmt : public StmtNode
 {
 private:
-    Id *id;
+    IdList *ids;
 public:
-    DeclStmt(Id *id) : id(id){};
-
+    DeclStmt(IdList *ids) : ids(ids){};
     void output(int level);
     void typeCheck();
     void genCode();
@@ -225,14 +260,19 @@ public:
     void genCode();
 };
 
-class AssignStmt : public StmtNode
+class BreakStmt : public StmtNode
 {
-private:
-    ExprNode *lval;
-    ExprNode *expr;
 public:
-    AssignStmt(ExprNode *lval, ExprNode *expr) : lval(lval), expr(expr) {};
+    BreakStmt() {};
+    void output(int level);
+    void typeCheck();
+    void genCode();
+};
 
+class ContinueStmt : public StmtNode
+{
+public:
+    ContinueStmt() {};
     void output(int level);
     void typeCheck();
     void genCode();
@@ -267,22 +307,5 @@ public:
     void genCode(Unit *unit);
 };
 
-class BreakStmt : public StmtNode
-{
-public:
-    BreakStmt() {};
-    void output(int level);
-    void typeCheck();
-    void genCode();
-};
-
-class ContinueStmt : public StmtNode
-{
-public:
-    ContinueStmt() {};
-    void output(int level);
-    void typeCheck();
-    void genCode();
-};
 
 #endif

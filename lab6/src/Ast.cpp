@@ -40,6 +40,17 @@ void Node::backPatch(std::vector<Instruction *> &list, BasicBlock *bb)
     }
 }
 
+void Node::backPatchFalse(std::vector<Instruction *> &list, BasicBlock *bb)
+{
+    for (auto &inst : list)
+    {
+        if (inst->isCond())
+            dynamic_cast<CondBrInstruction *>(inst)->setFalseBranch(bb);
+        else if (inst->isUncond())
+            dynamic_cast<UncondBrInstruction *>(inst)->setBranch(bb);
+    }
+}
+
 std::vector<Instruction *> Node::merge(std::vector<Instruction *> &list1, std::vector<Instruction *> &list2)
 {
     std::vector<Instruction *> res(list1);
@@ -49,6 +60,9 @@ std::vector<Instruction *> Node::merge(std::vector<Instruction *> &list1, std::v
 
 void Ast::genCode(Unit *unit)
 {
+    //直接把四个函数都声明了，免得后面出错
+    fprintf(yyout, "declare i32 @getint()\ndeclare i32 @getch()\n");
+    fprintf(yyout,"declare void @putint(i32)\ndeclare void @putch(i32)\n");
     IRBuilder *builder = new IRBuilder(unit);
     Node::setIRBuilder(builder);
     root->genCode();
@@ -89,7 +103,7 @@ void BinaryExpr::genCode()
         // Todo
         BasicBlock* falseBB = new BasicBlock(func);
         expr1->genCode();
-        backPatch(expr1->falseList(), falseBB);
+        backPatchFalse(expr1->falseList(), falseBB);
         builder->setInsertBB(falseBB);
         expr2->genCode();
         false_list = expr2->falseList();
@@ -163,15 +177,15 @@ void BinaryExpr::genCode()
         }
         new CmpInstruction(cmpcode, dst, src1, src2, bb);
 
+        /*
+        */
         // need modify
-        BasicBlock *truebb, *falsebb, *tempbb;
-        //临时假块
-        truebb = new BasicBlock(func);
-        falsebb = new BasicBlock(func);
-        tempbb = new BasicBlock(func);
-
-        true_list.push_back(new CondBrInstruction(truebb, tempbb, dst, bb));
-        false_list.push_back(new UncondBrInstruction(falsebb, tempbb));
+        //自行添加的正确错误列表合并
+        true_list = merge(expr1->trueList(), expr2->trueList());
+        false_list = merge(expr1->falseList(), expr2->falseList());
+        Instruction* temp = new CondBrInstruction(nullptr,nullptr,dst,bb);
+        this->trueList().push_back(temp);
+        this->falseList().push_back(temp);
     }
 }
 
@@ -187,6 +201,10 @@ void Id::genCode()
     new LoadInstruction(dst, addr, bb);
 }
 
+void IdList::genCode(){
+
+}
+
 void IfStmt::genCode()
 {
     Function *func;
@@ -195,10 +213,25 @@ void IfStmt::genCode()
     func = builder->getInsertBB()->getParent();
     then_bb = new BasicBlock(func);
     end_bb = new BasicBlock(func);
+    printf("label: %d, label: %d\n", then_bb->getNo(), end_bb->getNo());
+
+    then_bb -> addPred(builder->getInsertBB());//设置其前驱
+    builder -> getInsertBB() -> addSucc(then_bb);//设置后继
+    end_bb -> addPred(then_bb);
+    then_bb -> addSucc(end_bb);//
+    //end_bb -> addPred(builder -> getInsertBB());
+    //builder -> getInsertBB() -> addSucc(end_bb);
+
+    if(cond->getOperand()->getType()->isInt()){ // int to bool
+        cond->int2Bool();
+    }
 
     cond->genCode();
+
+    printf("label: %d, label: %d\n", then_bb->getNo(), end_bb->getNo());
+
     backPatch(cond->trueList(), then_bb);
-    backPatch(cond->falseList(), end_bb);
+    backPatchFalse(cond->falseList(), end_bb);
 
     builder->setInsertBB(then_bb);
     thenStmt->genCode();
@@ -206,6 +239,7 @@ void IfStmt::genCode()
     new UncondBrInstruction(end_bb, then_bb);
 
     builder->setInsertBB(end_bb);
+    
 }
 
 /*if then else end*/
@@ -220,7 +254,7 @@ void IfElseStmt::genCode()
     else_bb = new BasicBlock(func);
     end_bb = new BasicBlock(func);
 
-    //设置各种前驱后继
+    //设置前驱后继
     then_bb -> addPred(builder -> getInsertBB());
     builder -> getInsertBB() -> addSucc(then_bb);
 
@@ -232,9 +266,13 @@ void IfElseStmt::genCode()
     end_bb -> addPred(else_bb);
     else_bb -> addSucc(end_bb);
 
+    if(cond->getOperand()->getType()->isInt()){ // int to bool
+        cond->int2Bool();
+    }
+
     cond->genCode();
     backPatch(cond->trueList(),then_bb);
-    backPatch(cond->falseList(),else_bb);
+    backPatchFalse(cond->falseList(),else_bb);
 
     //thenStmt
     builder->setInsertBB(then_bb);
@@ -268,31 +306,57 @@ void SeqNode::genCode()
 }
 
 void DeclStmt::genCode()
-{
-    IdentifierSymbolEntry *se = dynamic_cast<IdentifierSymbolEntry *>(id->getSymPtr());
-    if (se->isGlobal())
-    {
-        Operand *addr;
-        SymbolEntry *addr_se;
-        addr_se = new IdentifierSymbolEntry(*se);
-        addr_se->setType(new PointerType(se->getType()));
-        addr = new Operand(addr_se);
-        se->setAddr(addr);
-    }
-    else if (se->isLocal())
-    {
-        Function *func = builder->getInsertBB()->getParent();
-        BasicBlock *entry = func->getEntry();
-        Instruction *alloca;
-        Operand *addr;
-        SymbolEntry *addr_se;
-        Type *type;
-        type = new PointerType(se->getType());
-        addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());
-        addr = new Operand(addr_se);
-        alloca = new AllocaInstruction(addr, se); // allocate space for local id in function stack.
-        entry->insertFront(alloca);               // allocate instructions should be inserted into the begin of the entry block.
-        se->setAddr(addr);                        // set the addr operand in symbol entry so that we can use it in subsequent code generation.
+{//类型不兼容，必须用unsigned long
+    for(unsigned long int j=0;j<ids->idlist.size();j++){
+    //std::cout<<"declgencode"<<std::endl;
+        IdentifierSymbolEntry *se = dynamic_cast<IdentifierSymbolEntry *>(ids->idlist[j]->getSymPtr());
+        if (se->isGlobal())
+        {   //设置se
+            Operand *addr;
+            SymbolEntry *addr_se;
+            addr_se = new IdentifierSymbolEntry(*se);
+            addr_se->setType(new PointerType(se->getType()));
+            addr = new Operand(addr_se);
+            se->setAddr(addr);
+            //判断变量是否直接赋值
+            Operand *src;
+            if(ids->assignlist.size()>0&&ids->assignlist[j]){//如果有预先赋值
+                //std::cout<<"i"<<std::endl;
+                //获取赋的值
+                AssignStmt* assign=ids->assignlist[j];
+                assign -> genCode();
+                src = assign-> expr -> getOperand();
+            }
+            else{//没有赋初值则置零
+                SymbolEntry *se = new ConstantSymbolEntry(TypeSystem::intType, 0);
+                Constant* digit = new Constant(se);
+                src = digit -> getOperand();
+            }
+            GlobalInstruction *g=new GlobalInstruction(addr,src,se);
+            g->output();
+        }
+        else if (se->isLocal())
+        {
+            Function *func = builder->getInsertBB()->getParent();
+            BasicBlock *entry = func->getEntry();
+            Instruction *alloca;
+            Operand *addr;
+            SymbolEntry *addr_se;
+            Type *type;
+            type = new PointerType(se->getType());
+            addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());//临时符号表
+            addr = new Operand(addr_se);
+            alloca = new AllocaInstruction(addr, se); // alloca指令
+            entry->insertFront(alloca);               // allocate instructions should be inserted into the begin of the entry block.
+            se->setAddr(addr);                        // set the addr operand in symbol entry so that we can use it in subsequent code generation.
+            //如果赋了初值
+            if(ids->assignlist.size()>0&&ids->assignlist[j]!=nullptr){
+                //std::cout<<"hh"<<std::endl;
+                Operand *addr = dynamic_cast<IdentifierSymbolEntry*>(ids -> assignlist[j] -> lval ->getSymPtr())->getAddr();
+                se->setAddr(addr); 
+                ids -> assignlist[j] -> genCode();
+            }
+        }
     }
 }
 
@@ -359,16 +423,15 @@ void UnaryExpr::genCode()
     else if (op == SUB || op == ADD) 
     {
         expr->genCode();
-        Operand* src1 = new Operand(new ConstantSymbolEntry(dst->getType(), 0));
-
-        Operand* temp = new Operand(new TemporarySymbolEntry(TypeSystem::intType,SymbolTable::getLabel()));
-        Operand* src2 = expr->getOperand();
+        //Operand* temp = new Operand(new TemporarySymbolEntry(TypeSystem::intType,SymbolTable::getLabel()));
+        Operand* src2 = expr->getOperand();//获得表达式源操作数
 
         // to complete
-        if (expr->getOperand()->getType() == TypeSystem::boolType) 
+        if (src2->getType() == TypeSystem::boolType) 
         {
+            //std::cout<<"isbool"<<std::endl;
             Operand* temp =new Operand(new TemporarySymbolEntry(TypeSystem::intType,SymbolTable::getLabel()));
-            new ZextInstruction(temp, expr->dst,bb); 
+            new ZextInstruction(temp, expr->dst,bb); //bool型扩展为整形
             expr->dst = temp;   
             src2 = temp; 
         }
@@ -384,6 +447,8 @@ void UnaryExpr::genCode()
         default:
             break;
         }
+        Operand* src1 = new Operand(new ConstantSymbolEntry(TypeSystem::intType, 0));
+        if(src1)
         new BinaryInstruction(opcode, dst, src1, src2, bb);
     }
 }
@@ -424,7 +489,7 @@ void WhileStmt::genCode()
     cond -> genCode();
 
     backPatch(cond -> trueList(), loop_bb);
-    backPatch(cond -> falseList(), end_bb);
+    backPatchFalse(cond -> falseList(), end_bb);
 
     builder -> setInsertBB(loop_bb);
     Stmt -> genCode();
@@ -522,6 +587,8 @@ void Id::typeCheck()
     // nothing can do
 }
 
+void IdList::typeCheck(){}
+
 void IfStmt::typeCheck()
 {
     // Todo
@@ -609,10 +676,8 @@ void AssignStmt::typeCheck()
     Type* type2 = this->expr->getSymPtr()->getType();
 
     if(type1 != type2){
-        fprintf(
-            stderr,
-            "cannot assign object of type \'%s\' with an rvalue "
-            "of type \'%s\'\n",
+        fprintf(stderr,
+            "assign type error: \'%s\' and \'%s\'\n",
             type1->toStr().c_str(), type2->toStr().c_str());
         exit(EXIT_FAILURE);
     }
@@ -809,10 +874,20 @@ void SeqNode::output(int level)
     stmt2->output(level + 4);
 }
 
+void IdList::output(int level){
+    fprintf(yyout, "%*cIdList\n", level, ' ');
+    for(unsigned long int i = 0; i < idlist.size(); i++){
+        idlist[i] -> output(level + 4);
+    }
+    for(unsigned long int j = 0; j < assignlist.size(); j++){
+        assignlist[j] -> output(level + 4);
+    }
+}
+
 void DeclStmt::output(int level)
 {
     fprintf(yyout, "%*cDeclStmt\n", level, ' ');
-    id->output(level + 4);
+    ids->output(level + 4);
 
     if (this->getNext())
     {

@@ -208,7 +208,7 @@ void SeqNode::output(int level)
 void DeclStmt::output(int level)
 {
     fprintf(yyout, "%*cDeclStmt\n", level, ' ');
-    id->output(level + 4);
+    ids->output(level + 4);
     
     if (this->getNext()) {
         this->getNext()->output(level);

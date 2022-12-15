@@ -41,6 +41,8 @@ std::string ConstantSymbolEntry::toStr()
 
 IdentifierSymbolEntry::IdentifierSymbolEntry(Type *type, std::string name, int scope) : SymbolEntry(type, SymbolEntry::VARIABLE), name(name)
 {
+    printf("scope: %d\n", identifiers->getLevel());
+    std::cout<<"scope: "<<identifiers->getLevel()<<std::endl;
     this->scope = scope;
     this->constant=false;
     this->inited=false;
