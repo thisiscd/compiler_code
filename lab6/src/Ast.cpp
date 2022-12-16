@@ -175,12 +175,11 @@ void BinaryExpr::genCode()
         default:
             break;
         }
+        //printf("1: %s, 2: %s, 3: %s\n", dst->toStr().c_str(), src1->toStr().c_str(), src2->toStr().c_str());
         new CmpInstruction(cmpcode, dst, src1, src2, bb);
 
-        /*
-        */
         // need modify
-        //自行添加的正确错误列表合并
+        //正确错误列表合并
         true_list = merge(expr1->trueList(), expr2->trueList());
         false_list = merge(expr1->falseList(), expr2->falseList());
         Instruction* temp = new CondBrInstruction(nullptr,nullptr,dst,bb);
@@ -213,7 +212,7 @@ void IfStmt::genCode()
     func = builder->getInsertBB()->getParent();
     then_bb = new BasicBlock(func);
     end_bb = new BasicBlock(func);
-    printf("label: %d, label: %d\n", then_bb->getNo(), end_bb->getNo());
+    //printf("label: %d, label: %d\n", then_bb->getNo(), end_bb->getNo());
 
     then_bb -> addPred(builder->getInsertBB());//设置其前驱
     builder -> getInsertBB() -> addSucc(then_bb);//设置后继
@@ -222,14 +221,15 @@ void IfStmt::genCode()
     //end_bb -> addPred(builder -> getInsertBB());
     //builder -> getInsertBB() -> addSucc(end_bb);
 
-    if(cond->getOperand()->getType()->isInt()){ // int to bool
+    //if(cond->getOperand()->getType()->isInt()){ // int to bool
+    Type* temp = cond->getSymPtr()->getType();
+    if(temp->isInt() && ((IntType*) temp)->getSize() == 32){
+        //printf("cond se: %s\n", cond->getSymPtr()->getType()->toStr().c_str());
         cond->int2Bool();
     }
 
+
     cond->genCode();
-
-    printf("label: %d, label: %d\n", then_bb->getNo(), end_bb->getNo());
-
     backPatch(cond->trueList(), then_bb);
     backPatchFalse(cond->falseList(), end_bb);
 
@@ -239,7 +239,6 @@ void IfStmt::genCode()
     new UncondBrInstruction(end_bb, then_bb);
 
     builder->setInsertBB(end_bb);
-    
 }
 
 /*if then else end*/
@@ -266,7 +265,9 @@ void IfElseStmt::genCode()
     end_bb -> addPred(else_bb);
     else_bb -> addSucc(end_bb);
 
-    if(cond->getOperand()->getType()->isInt()){ // int to bool
+    Type* temp = cond->getSymPtr()->getType();
+    if(temp->isInt() && ((IntType*) temp)->getSize() == 32){
+        //printf("cond se: %s\n", cond->getSymPtr()->getType()->toStr().c_str());
         cond->int2Bool();
     }
 
@@ -402,6 +403,11 @@ void CallExpr::genCode()
         temp = ((ExprNode*)temp->getNext());
     }
     BasicBlock* bb = builder->getInsertBB();
+
+    Type *type2 = new IntType(32);  // temp register for function retValue
+    SymbolEntry *addr_se2 = new TemporarySymbolEntry(type2, SymbolTable::getLabel());
+    dst = new Operand(addr_se2);
+    
     new CallInstruction(dst, symbolEntry, operands, bb);
 }
 void UnaryExpr::genCode()
@@ -430,7 +436,7 @@ void UnaryExpr::genCode()
         if (src2->getType() == TypeSystem::boolType) 
         {
             //std::cout<<"isbool"<<std::endl;
-            Operand* temp =new Operand(new TemporarySymbolEntry(TypeSystem::intType,SymbolTable::getLabel()));
+            Operand* temp =new Operand(new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel()));
             new ZextInstruction(temp, expr->dst,bb); //bool型扩展为整形
             expr->dst = temp;   
             src2 = temp; 
@@ -471,7 +477,7 @@ void WhileStmt::genCode()
 
     UncondBrInstruction *temp = new UncondBrInstruction(cond_bb, builder -> getInsertBB());
     temp -> output();
-    //设置前后
+    //设置前驱后继
     cond_bb -> addPred(builder -> getInsertBB());
     builder -> getInsertBB() -> addSucc(cond_bb);
     loop_bb -> addPred(cond_bb);
@@ -486,6 +492,9 @@ void WhileStmt::genCode()
 
     builder->setInsertBB(cond_bb);
 
+    if(cond->getOperand()->getType()->isInt()){ // int to bool
+        cond->int2Bool();
+    }
     cond -> genCode();
 
     backPatch(cond -> trueList(), loop_bb);
@@ -550,7 +559,6 @@ void FunctionDef::typeCheck()
             fprintf(stderr, "non-void function does not return a value.\n");
             exit(EXIT_FAILURE);
         }
-        // 不嵌套函数定义就返回了
         return ;
     }
     stmt->typeCheck();
@@ -672,15 +680,6 @@ void ReturnStmt::typeCheck()
 void AssignStmt::typeCheck()
 {
     // Todo
-    Type* type1 = this->lval->getSymPtr()->getType();
-    Type* type2 = this->expr->getSymPtr()->getType();
-
-    if(type1 != type2){
-        fprintf(stderr,
-            "assign type error: \'%s\' and \'%s\'\n",
-            type1->toStr().c_str(), type2->toStr().c_str());
-        exit(EXIT_FAILURE);
-    }
 }
 
 void UnaryExpr::output(int level)

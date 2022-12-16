@@ -23,7 +23,7 @@ protected:
     std::vector<Instruction*> false_list;
     static IRBuilder *builder;
     void backPatch(std::vector<Instruction*> &list, BasicBlock*bb);
-    void backPatchFalse(std::vector<Instruction *> &list, BasicBlock *bb);
+    void backPatchFalse(std::vector<Instruction *> &list, BasicBlock *bb);//什么功能？
     std::vector<Instruction *> merge(std::vector<Instruction *> &list1, std::vector<Instruction *> &list2);
 
 public:
