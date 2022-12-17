@@ -18,7 +18,7 @@ private:
     std::vector<Instruction *> uses; // Intructions that use this operand.
     SymbolEntry *se;                 // The symbol entry of this operand.
 public:
-    Operand(SymbolEntry*se) :se(se){def = nullptr;}//; printf("new op: %s\n", se->toStr().c_str());};
+    Operand(SymbolEntry*se) :se(se){def = nullptr;};
     void setDef(Instruction *inst) {def = inst;};
     void addUse(Instruction *inst) { uses.push_back(inst);};
     void removeUse(Instruction *inst);

@@ -37,6 +37,7 @@
 %nterm <stmttype> Stmts Stmt AssignStmt BlockStmt IfStmt WhileStmt ReturnStmt DeclStmt VarDeclStmt VarDef ConstDeclStmt ConstDef FuncDef
 %nterm <stmttype> ExprStmt BlankStmt VarDefList ConstDefList
 %nterm <stmttype> BreakStmt ContinueStmt
+%nterm <stmttype> FuncFParam FuncFParams
 %nterm <exprtype> FuncRParams
 %nterm <exprtype> Exp AddExp MulExp Cond LOrExp PrimaryExp UnaryExp LVal RelExp LAndExp
 %nterm <type> Type
@@ -326,12 +327,19 @@ VarDef
         IdList *tem = new IdList(idlist, assignlist);//标识符列表
         SymbolEntry* se;
         se = new IdentifierSymbolEntry(declType, $1, identifiers->getLevel());
-        identifiers->install($1, se);
-        //$$ = new DeclStmt(new Id(se));
+        bool a=false;
+        if(!identifiers->lookup($1)){
+            identifiers->install($1, se);
+            a=false;    
+        }
+        else{
+            a=true;
+            fprintf(stderr,"identifier %s is redefined\n",(char*)$1);
+            delete [](char*)$1;
+            assert( !a);
+        }
         tem->idlist.push_back(new Id(se));
         $$=(StmtNode*)tem;
-        //$$=new Id(se);
-        //std::cout<<"id"<<std::endl;
         delete []$1;
     }
     |
@@ -341,7 +349,17 @@ VarDef
         IdList *tem = new IdList(idlist, assignlist);//标识符列表
         SymbolEntry *se;
         se = new IdentifierSymbolEntry(declType, $1, identifiers->getLevel());
-        identifiers->install($1, se);
+        bool a=false;
+        if(!identifiers->lookup($1)){
+            identifiers->install($1, se);
+            a=false;    
+        }
+        else{
+            a=true;
+            fprintf(stderr,"identifier %s is redefined\n",(char*)$1);
+            delete [](char*)$1;
+            assert( !a);
+        }
         //$$ = new DeclStmt(new Id(se));
         tem->idlist.push_back(new Id(se));
         tem->assignlist.push_back(new AssignStmt(new Id(se),$3));
@@ -373,17 +391,9 @@ VarDeclStmt
     ;
 ConstDef
     :
-    // ID{
-    //     IdentifierSymbolEntry *se;
-    //     se = new IdentifierSymbolEntry(declType, $1, identifiers->getLevel());
-    //     se->setConst();
-    //     identifiers->install($1, se);
-    //     //$$ = new DeclStmt(new Id(se));
-    // }
-    // |
-     ID ASSIGN Exp {
-         std::vector<Id*> idlist;
-         std::vector<AssignStmt*> assignlist;
+    ID ASSIGN Exp {
+        std::vector<Id*> idlist;
+        std::vector<AssignStmt*> assignlist;
         IdList *tem = new IdList(idlist, assignlist);//标识符列表
         IdentifierSymbolEntry *se;
         se = new IdentifierSymbolEntry(declType, $1, identifiers->getLevel());
@@ -393,8 +403,8 @@ ConstDef
         tem->assignlist.push_back(new AssignStmt(new Id(se),$3));
         $$=(StmtNode*)tem;
         //$$ = new DeclStmt(new Id(se));
-     }
-     ;
+    }
+    ;
 ConstDefList
     :
     ConstDef { $$ = $1;}
@@ -417,22 +427,102 @@ ConstDeclStmt
         $$ = new DeclStmt((IdList*)$3);
     }
     ;
+FuncFParams
+    : 
+    FuncFParams COMMA FuncFParam {
+        IdList *ids=(IdList*)$1;
+        IdList *id=(IdList*)$3;
+        ids->idlist.insert(ids->idlist.end(),id->idlist.begin(),id->idlist.end());
+        ids->assignlist.insert(ids->assignlist.end(),id->assignlist.begin(),id->assignlist.end());
+        $1->setNext($3);
+        //std::cout<<"idlist"<<std::endl;
+        $$ = (StmtNode*)ids;
+    }
+    | 
+    FuncFParam {
+        $$ = $1;
+    }
+    ;
+FuncFParam
+    : 
+    Type ID {
+        std::vector<Id*> idlist;
+        std::vector<AssignStmt*> assignlist;
+        IdList *tem = new IdList(idlist, assignlist);//标识符列表
+        SymbolEntry* se;
+        se = new IdentifierSymbolEntry($1, $2, identifiers->getLevel());
+        bool a=false;
+        if(!identifiers->lookup($2)){
+            identifiers->install($2, se);
+            a=false;    
+        }
+        else{
+            a=true;
+            fprintf(stderr,"identifier %s is redefined\n",(char*)$2);
+            delete [](char*)$2;
+            assert(!a);
+        }
+        tem->idlist.push_back(new Id(se));
+        $$=(StmtNode*)tem;
+        delete []$2;
+    }
+    ;
 FuncDef
     :
-    Type ID {
+    Type ID LPAREN {
         Type *funcType;
         funcType = new FunctionType($1,{});
         SymbolEntry *se = new IdentifierSymbolEntry(funcType, $2, identifiers->getLevel());
-        identifiers->install($2, se);
+        bool a=false;
+        if(!identifiers->lookup($2)){
+            identifiers->install($2, se);
+            a=false;    
+        }
+        else{
+            a=true;
+            fprintf(stderr,"function %s is redefined\n",(char*)$2);
+            delete [](char*)$2;
+            assert(!a);
+        }
         identifiers = new SymbolTable(identifiers);
     }
-    LPAREN RPAREN
+    RPAREN
     BlockStmt
     {
         SymbolEntry *se;
         se = identifiers->lookup($2);
         assert(se != nullptr);
         $$ = new FunctionDef(se, $6);
+        SymbolTable *top = identifiers;
+        identifiers = identifiers->getPrev();
+        delete top;
+        delete []$2;
+    }
+    |
+    Type ID LPAREN {
+        Type *funcType;
+        funcType = new FunctionType($1,{});
+        SymbolEntry *se = new IdentifierSymbolEntry(funcType, $2, identifiers->getLevel());
+        bool a=false;
+        if(!identifiers->lookup($2)){
+            identifiers->install($2, se);
+            a=false;    
+        }
+        else{
+            a=true;
+            fprintf(stderr,"function %s is redefined\n",(char*)$2);
+            delete [](char*)$2;
+            assert(!a);
+        }
+        identifiers = new SymbolTable(identifiers);
+    }
+    FuncFParams RPAREN
+    BlockStmt   
+    {
+        SymbolEntry *se;
+        se = identifiers->lookup($2);
+        assert(se != nullptr);
+        $$ = new FunctionDef(se, (IdList*)$5 ,$7);
         SymbolTable *top = identifiers;
         identifiers = identifiers->getPrev();
         delete top;
