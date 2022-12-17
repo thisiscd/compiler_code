@@ -113,6 +113,11 @@ ReturnStmt
     RETURN Exp SEMICOLON{
         $$ = new ReturnStmt($2);
     }
+    | 
+    RETURN SEMICOLON{
+        ExprNode* retValue=nullptr;
+        $$=new ReturnStmt(retValue);
+    }
     ;
 WhileStmt
     :
@@ -173,16 +178,22 @@ UnaryExp
     ID LPAREN FuncRParams RPAREN {//函数调用
         SymbolEntry* se;
         se = identifiers->lookup($1);
-        if (se == nullptr)
+        if (se == nullptr){
             fprintf(stderr, "function \"%s\" is undefined\n", (char*)$1);
+            delete [](char*)$1;
+            assert(se!=nullptr);
+        }
         $$ = new CallExpr(se, $3);
     }
     |
     ID LPAREN RPAREN {
         SymbolEntry* se;
         se = identifiers->lookup($1);
-        if (se == nullptr)
+        if (se == nullptr){
             fprintf(stderr, "function \"%s\" is undefined\n", (char*)$1);
+            delete [](char*)$1;
+            assert(se!=nullptr);
+        }
         $$ = new CallExpr(se);
     }
     |
@@ -344,8 +355,8 @@ VarDef
     }
     |
      ID ASSIGN Exp {
-         std::vector<Id*> idlist;
-         std::vector<AssignStmt*> assignlist;
+        std::vector<Id*> idlist;
+        std::vector<AssignStmt*> assignlist;
         IdList *tem = new IdList(idlist, assignlist);//标识符列表
         SymbolEntry *se;
         se = new IdentifierSymbolEntry(declType, $1, identifiers->getLevel());
@@ -391,9 +402,9 @@ VarDeclStmt
     ;
 ConstDef
     :
-    ID ASSIGN Exp {
-        std::vector<Id*> idlist;
-        std::vector<AssignStmt*> assignlist;
+     ID ASSIGN Exp {
+         std::vector<Id*> idlist;
+         std::vector<AssignStmt*> assignlist;
         IdList *tem = new IdList(idlist, assignlist);//标识符列表
         IdentifierSymbolEntry *se;
         se = new IdentifierSymbolEntry(declType, $1, identifiers->getLevel());
@@ -403,8 +414,8 @@ ConstDef
         tem->assignlist.push_back(new AssignStmt(new Id(se),$3));
         $$=(StmtNode*)tem;
         //$$ = new DeclStmt(new Id(se));
-    }
-    ;
+     }
+     ;
 ConstDefList
     :
     ConstDef { $$ = $1;}
@@ -451,17 +462,17 @@ FuncFParam
         IdList *tem = new IdList(idlist, assignlist);//标识符列表
         SymbolEntry* se;
         se = new IdentifierSymbolEntry($1, $2, identifiers->getLevel());
-        bool a=false;
-        if(!identifiers->lookup($2)){
-            identifiers->install($2, se);
-            a=false;    
-        }
-        else{
-            a=true;
-            fprintf(stderr,"identifier %s is redefined\n",(char*)$2);
-            delete [](char*)$2;
-            assert(!a);
-        }
+        // bool a=false;
+        // if(!identifiers->lookup($2)){
+        identifiers->install($2, se);
+        //     a=false;    
+        // }
+        // else{
+        //     a=true;
+        //     fprintf(stderr,"identifier %s is redefined\n",(char*)$2);
+        //     delete [](char*)$2;
+        //     assert(!a);
+        // }
         tem->idlist.push_back(new Id(se));
         $$=(StmtNode*)tem;
         delete []$2;
@@ -499,9 +510,14 @@ FuncDef
         delete []$2;
     }
     |
-    Type ID LPAREN {
-        Type *funcType;
-        funcType = new FunctionType($1,{});
+    Type ID LPAREN FuncFParams {
+        IdList* params=(IdList*)$4;
+        std::vector<Type*> paramsType;
+        for(unsigned int i=0;i<params->idlist.size();i++){
+            Type* t=params->idlist[i]->getType();
+            paramsType.push_back(t);
+        }
+        Type *funcType = new FunctionType($1,paramsType);
         SymbolEntry *se = new IdentifierSymbolEntry(funcType, $2, identifiers->getLevel());
         bool a=false;
         if(!identifiers->lookup($2)){
@@ -516,13 +532,14 @@ FuncDef
         }
         identifiers = new SymbolTable(identifiers);
     }
-    FuncFParams RPAREN
+    RPAREN
     BlockStmt   
     {
         SymbolEntry *se;
         se = identifiers->lookup($2);
         assert(se != nullptr);
-        $$ = new FunctionDef(se, (IdList*)$5 ,$7);
+        $$ = new FunctionDef(se, (IdList*)$4 ,$7);
+        //std::cout<<"stmt"<<std::endl;
         SymbolTable *top = identifiers;
         identifiers = identifiers->getPrev();
         delete top;
