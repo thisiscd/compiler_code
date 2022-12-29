@@ -411,7 +411,6 @@ void DeclStmt::genCode()
                 se->setAddr(addr); 
                 ids -> assignlist[j] -> genCode();
             }
-            //存疑
         }
     }
 }
@@ -643,23 +642,20 @@ void BinaryExpr::typeCheck(Type* retType)
     expr2->typeCheck(retType);
     Type *type1 = expr1->getSymPtr()->getType();
     Type *type2 = expr2->getSymPtr()->getType();
-    //std::cout<<expr1->getType()->toStr()<<std::endl;
-    //  if(expr1->getType()->isFunc())
-    //      type1=((FunctionType*)expr1->getSymPtr()->getType())->getRetType();
-    //  if(expr2->getType()->isFunc())
-    //      type2=((FunctionType*)expr2->getSymPtr()->getType())->getRetType();
-    
-    if(type1->isVoid()||type2->isVoid()){
-        fprintf(stderr, "类型为空的表达式 %s 不能进行运算。\n",
-                expr1->getSymPtr()->toStr().c_str());
-        exit(EXIT_FAILURE);
-    }
+
     if (!type1->equal(type2))
     {
         fprintf(stderr, "类型为 %s 的变量 %s 和类型为 %s 的变量 %s不匹配。\n",
                 type1->toStr().c_str(), expr1->getSymPtr()->toStr().c_str(),
                 type2->toStr().c_str(), expr2->getSymPtr()->toStr().c_str());
         exit(EXIT_FAILURE);
+    }
+    if(expr1->getType()){
+        if(expr1->getType()->isVoid()){
+            fprintf(stderr, "类型为空的表达式 %s 不能进行运算。\n",
+                    expr1->getSymPtr()->toStr().c_str());
+            exit(EXIT_FAILURE);
+        }
     }
     if(expr2->getType()){
         if(expr2->getType()->isVoid()){
