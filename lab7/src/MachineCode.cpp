@@ -97,26 +97,26 @@ void MachineInstruction::PrintCond()
     // TODO
     switch (cond)
     {
-    case EQ:
-        fprintf(yyout, "eq");
-        break;
-    case NE:
-        fprintf(yyout, "ne");
-        break;
-    case LT:
-        fprintf(yyout, "lt");
-        break;
-    case LE:
-        fprintf(yyout, "le");
-        break;
-    case GT:
-        fprintf(yyout, "gt");
-        break;
-    case GE:
-        fprintf(yyout, "ge");
-        break;
-    default:
-        break;
+        case LT:
+            fprintf(yyout, "lt");
+            break;
+        case GT:
+            fprintf(yyout, "gt");
+            break;
+        case EQ:
+            fprintf(yyout, "eq");
+            break;
+        case NE:
+            fprintf(yyout, "ne");
+            break;
+        case LE:
+            fprintf(yyout, "le");
+            break;
+        case GE:
+            fprintf(yyout, "ge");
+            break;
+        default:
+            break;
     }
 }
 
@@ -145,67 +145,32 @@ void BinaryMInstruction::output()
     {
     case BinaryMInstruction::ADD:
         fprintf(yyout, "\tadd ");
-        this->PrintCond();
-        this->def_list[0]->output();
-        fprintf(yyout, ", ");
-        this->use_list[0]->output();
-        fprintf(yyout, ", ");
-        this->use_list[1]->output();
-        fprintf(yyout, "\n");
         break;
     case BinaryMInstruction::SUB:
         fprintf(yyout, "\tsub ");
-        this->PrintCond();
-        this->def_list[0]->output();
-        fprintf(yyout, ", ");
-        this->use_list[0]->output();
-        fprintf(yyout, ", ");
-        this->use_list[1]->output();
-        fprintf(yyout, "\n");
         break;
     case BinaryMInstruction::AND:
         fprintf(yyout, "\tand ");
-        this->PrintCond();
-        this->def_list[0]->output();
-        fprintf(yyout, ", ");
-        this->use_list[0]->output();
-        fprintf(yyout, ", ");
-        this->use_list[1]->output();
-        fprintf(yyout, "\n");
         break;
     case BinaryMInstruction::OR:
         fprintf(yyout, "\torr ");
-        this->PrintCond();
-        this->def_list[0]->output();
-        fprintf(yyout, ", ");
-        this->use_list[0]->output();
-        fprintf(yyout, ", ");
-        this->use_list[1]->output();
-        fprintf(yyout, "\n");
         break;
     case BinaryMInstruction::MUL:
         fprintf(yyout, "\tmul ");
-        this->PrintCond();
-        this->def_list[0]->output();
-        fprintf(yyout, ", ");
-        this->use_list[0]->output();
-        fprintf(yyout, ", ");
-        this->use_list[1]->output();
-        fprintf(yyout, "\n");
         break;
     case BinaryMInstruction::DIV:
         fprintf(yyout, "\tsdiv ");
-        this->PrintCond();
-        this->def_list[0]->output();
-        fprintf(yyout, ", ");
-        this->use_list[0]->output();
-        fprintf(yyout, ", ");
-        this->use_list[1]->output();
-        fprintf(yyout, "\n");
         break;
     default:
         break;
     }
+    this->PrintCond();
+    this->def_list[0]->output();
+    fprintf(yyout, ", ");
+    this->use_list[0]->output();
+    fprintf(yyout, ", ");
+    this->use_list[1]->output();
+    fprintf(yyout, "\n");
 }
 
 LoadMInstruction::LoadMInstruction(MachineBlock* p,
@@ -384,15 +349,52 @@ void CmpMInstruction::output()
 }
 
 StackMInstrcuton::StackMInstrcuton(MachineBlock* p, int op, 
-    MachineOperand* src,
+    std::vector<MachineOperand*> regs,
+    MachineOperand* src1,
+    MachineOperand* src2,
     int cond)
 {
     // TODO
+    this->parent=p;
+    this->op=op;
+    this->cond=cond;
+    this->type=MachineInstruction::STACK;
+    if(regs.size()!=0){
+        for(auto reg:regs){
+            this->addUse(reg);
+        }
+    }
+    if (src1 != nullptr) 
+    {
+        this->use_list.push_back(src1);
+        src1->setParent(this);
+    }
+    if (src2 != nullptr) 
+    {
+        this->use_list.push_back(src2);
+        src2->setParent(this);
+    }
 }
 
 void StackMInstrcuton::output()
 {
     // TODO
+    switch (op) 
+    {
+        case PUSH:
+            fprintf(yyout, "\tpush ");
+            break;
+        case POP:
+            fprintf(yyout, "\tpop ");
+            break;
+    }
+    fprintf(yyout, "{");
+    this->use_list[0]->output();
+    for(long unsigned int i=1;i<use_list.size();i++){
+        fprintf(yyout, ", ");
+        this->use_list[i]->output();
+    }
+    fprintf(yyout, "}\n");
 }
 
 MachineFunction::MachineFunction(MachineUnit* p, SymbolEntry* sym_ptr) 

@@ -766,14 +766,68 @@ void RetInstruction::genMachineCode(AsmBuilder* builder)
 
 void CallInstruction::genMachineCode(AsmBuilder* builder){
     // TODO
-    // auto cur_block = builder->getBlock();
-    // MachineOperand* operand;  
-    // MachineInstruction* cur_inst;
+    auto cur_block = builder->getBlock();
+    MachineOperand* operand;  
+    MachineOperand* dst1;
+    MachineInstruction* cur_inst;
     // 在进行函数调用时，对于含参函数，需要使用 R0-R3 寄存器传递参数，
+    int paramCount=int(operands.size()-1);//参数数目
+    //std::cout<<paramCount<<std::endl;
+    if(paramCount<=4){
+        for(int i=0;i<paramCount;i++){
+            dst1=genMachineReg(i);
+            operand=genMachineOperand(operands[i+1]);
+            //判断是否是立即数
+            if (operand->isImm()){
+                cur_inst=new LoadMInstruction(cur_block, dst1, operand);
+            } 
+            else{
+                cur_inst=new MovMInstruction(cur_block, MovMInstruction::MOV, dst1, operand);
+            }
+            cur_block->InsertInst(cur_inst);
+        }
+    }
     // 如果参数个数大于四个还需要生成 PUSH 指令来传递参数；
+    else{
+        for(int i=0;i<4;i++){
+            dst1=genMachineReg(i);
+            operand=genMachineOperand(operands[i+1]);
+            //判断是否是立即数
+            if (operand->isImm()){
+                cur_inst=new LoadMInstruction(cur_block, dst1, operand);
+            } 
+            else{
+                cur_inst=new MovMInstruction(cur_block, MovMInstruction::MOV, dst1, operand);
+            }
+            cur_block->InsertInst(cur_inst);
+        }
+        for(int j=4;j<paramCount;j++){
+            operand = genMachineOperand(operands[j+1]);
+            if(operand->isImm()){
+                cur_inst = new LoadMInstruction(cur_block, genMachineVReg(), operand);
+                cur_block->InsertInst(cur_inst);
+                operand = genMachineVReg();
+            }
+            std::vector<MachineOperand*> temp;//
+            cur_inst=new StackMInstrcuton(cur_block,StackMInstrcuton::PUSH,temp,operand);
+            cur_block->InsertInst(cur_inst);
+        }
+    }
     // 之后生成跳转指令来进入 Callee 函数；
+    cur_inst = new BranchMInstruction(cur_block, BranchMInstruction::BL, new MachineOperand(func->toStr().c_str()));
+    cur_block->InsertInst(cur_inst);
     // 如果之前通过压栈的方式传递了参数，需要恢复 SP 寄存器；
+    if (paramCount > 4) {
+        MachineOperand *sp = new MachineOperand(MachineOperand::REG, 13);
+        cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD,sp, sp, genMachineImm((operands.size() - 5) * 4));
+        cur_block->InsertInst(cur_inst);
+    }
     // 最后，如果函数执行结果被用到，还需要保存 R0 寄存器中的返回值。
+    if (dst) {
+        MachineOperand* r0=new MachineOperand(MachineOperand::REG, 0);
+        cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, genMachineOperand(dst), r0);
+        cur_block->InsertInst(cur_inst);
+    }
 }
 
 void ZextInstruction::genMachineCode(AsmBuilder* builder){
