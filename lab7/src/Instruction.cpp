@@ -539,7 +539,7 @@ void StoreInstruction::genMachineCode(AsmBuilder* builder)
     && operands[0]->getDef()->isAlloc())
     {
         // example: store r1, [r0, #4]
-        auto dst = genMachineOperand(operands[0]);
+        //auto dst = genMachineOperand(operands[0]);
         auto src1 = genMachineReg(11);
         int offset = dynamic_cast<TemporarySymbolEntry*>(operands[0]->getEntry()) ->getOffset();
         auto src2 = genMachineImm(offset);
@@ -550,7 +550,7 @@ void StoreInstruction::genMachineCode(AsmBuilder* builder)
             cur_block->InsertInst((new LoadMInstruction(cur_block, operand, src2)));
             src2 = operand;
         }
-        cur_inst = new StoreMInstruction(cur_block, dst, src1, src2);
+        cur_inst = new StoreMInstruction(cur_block, src, src1, src2);
         cur_block->InsertInst(cur_inst);
     }
     // store to pointer
