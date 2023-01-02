@@ -534,9 +534,9 @@ void StoreInstruction::genMachineCode(AsmBuilder* builder)
         cur_block->InsertInst(cur_inst);
     }
     // store local operand
-    else if(operands[1]->getEntry()->isTemporary()
-    && operands[1]->getDef()
-    && operands[1]->getDef()->isAlloc())
+    else if(operands[0]->getEntry()->isTemporary()
+    && operands[0]->getDef()
+    && operands[0]->getDef()->isAlloc())
     {
         // example: store r1, [r0, #4]
         auto dst = genMachineOperand(operands[0]);
