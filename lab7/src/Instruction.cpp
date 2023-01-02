@@ -550,7 +550,7 @@ void StoreInstruction::genMachineCode(AsmBuilder* builder)
             cur_block->InsertInst((new LoadMInstruction(cur_block, operand, src2)));
             src2 = operand;
         }
-        cur_inst = new LoadMInstruction(cur_block, dst, src1, src2);
+        cur_inst = new StoreMInstruction(cur_block, dst, src1, src2);
         cur_block->InsertInst(cur_inst);
     }
     // store to pointer

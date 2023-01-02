@@ -1065,7 +1065,7 @@ int BinaryExpr::getValue(){
             break;
         case DIV:
             if(value2!=0)
-                value = value1 - value2;
+                value = value1 / value2;
             break;
         case MOD:
             value = value1 % value2;
