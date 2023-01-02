@@ -6,6 +6,8 @@
 #include <string>
 #include "Type.h"
 
+extern Unit unit;
+extern MachineUnit mUnit;
 extern FILE *yyout;
 int Node::counter = 0;
 IRBuilder *Node::builder = nullptr;
@@ -374,11 +376,14 @@ void DeclStmt::genCode()
             addr_se->setType(new PointerType(se->getType()));
             addr = new Operand(addr_se);
             se->setAddr(addr);
+            mUnit.InsertGlobal(se);
             //判断变量是否直接赋值
             Operand *src;
             if(ids->assignlist.size()>0&&ids->assignlist[j]){//如果有预先赋值
                 //std::cout<<"i"<<std::endl;
                 //获取赋的值
+                //se->setValue(ids->assignlist[j])
+                //std::cout<<ids->assignlist[j]->expr->getSymPtr()->toStr()<<std::endl;
                 AssignStmt* assign=ids->assignlist[j];
                 assign -> genCode();
                 src = assign-> expr -> getOperand();
@@ -1013,4 +1018,92 @@ void BreakStmt::output(int level)
 void ContinueStmt::output(int level)
 {
     fprintf(yyout, "%*cContinueStmt\n", level, ' ');
+}
+
+int UnaryExpr::getValue(){
+    // lab7todo
+    int value = 0;
+    switch(op)      /* enum {ADD, SUB, NOT}; */
+    {
+        case ADD:
+            value = expr->getValue();
+            break;
+        case SUB:
+            value = -expr->getValue();
+            break;
+        case NOT:
+            value = !expr->getValue();
+            break;
+    }
+    return value;
+}
+
+int CallExpr::getValue(){
+    // lab7todo
+    return 0;
+}
+
+int BinaryExpr::getValue(){
+    // lab7todo
+    int value=0;
+    int value1=expr1->getValue();
+    int value2=expr2->getValue();
+    /* 
+    enum {ADD, SUB, MUL, DIV, MOD, AND, OR, 
+    LESS, GREATER, LESSEQUAL, GREATEREQUAL, EQUAL, NOTEQUAL}; 
+    */
+    switch(op)
+    {
+        case ADD:
+            value = value1 + value2;
+            break;
+        case SUB:
+            value = value1 - value2;
+            break;
+        case MUL:
+            value = value1 * value2;
+            break;
+        case DIV:
+            if(value2!=0)
+                value = value1 - value2;
+            break;
+        case MOD:
+            value = value1 % value2;
+            break;
+        case AND:
+            value = value1 && value2;
+            break;
+        case OR:
+            value = value1 || value2;
+            break;
+        case LESS:
+            value = value1 < value2;
+            break;
+        case GREATER:
+            value = value1 > value2;
+            break;
+        case LESSEQUAL:
+            value = value1 <= value2;
+            break;
+        case GREATEREQUAL:
+            value = value1 >= value2;
+            break;
+        case EQUAL:
+            value = value1 == value2;
+            break;
+        case NOTEQUAL:
+            value = value1 != value2;
+            break;
+    }
+    return value;
+}
+
+int Constant::getValue() 
+{
+    return ((ConstantSymbolEntry*)symbolEntry)->getValue();
+}
+
+int Id::getValue() 
+{
+    return ((IdentifierSymbolEntry*)symbolEntry)->getValue();
 }
