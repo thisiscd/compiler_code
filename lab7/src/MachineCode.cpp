@@ -1,5 +1,6 @@
 #include "MachineCode.h"
 #include"Type.h"
+#include<iostream>
 extern FILE* yyout;
 
 MachineOperand::MachineOperand(int tp, int val)
@@ -84,8 +85,11 @@ void MachineOperand::output()
         PrintReg();
         break;
     case LABEL:
+        //std::cout<<this->getLabel()<<std::endl;
         if (this->label.substr(0, 2) == ".L")
             fprintf(yyout, "%s", this->label.c_str());
+        else if (this->label.substr(0, 1) == "@")//是函数的情况
+                fprintf(yyout, "%s", this->label.c_str() + 1);
         else
             fprintf(yyout, "addr_%s", this->label.c_str());
     default:
@@ -431,7 +435,7 @@ std::vector<MachineOperand*> MachineFunction::getSavedRegs()
 
 void MachineFunction::output()
 {
-    const char *func_name = this->sym_ptr->toStr().c_str();
+    const char *func_name = this->sym_ptr->toStr().c_str()+1;
     fprintf(yyout, "\t.global %s\n", func_name);
     fprintf(yyout, "\t.type %s , %%function\n", func_name);
     fprintf(yyout, "%s:\n", func_name);

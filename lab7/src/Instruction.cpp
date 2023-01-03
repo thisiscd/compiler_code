@@ -523,8 +523,8 @@ void StoreInstruction::genMachineCode(AsmBuilder* builder)
     }
 
     // store global operand
-    if(operands[1]->getEntry()->isVariable()
-    && dynamic_cast<IdentifierSymbolEntry*>(operands[1]->getEntry())->isGlobal())
+    if(operands[0]->getEntry()->isVariable()
+    && dynamic_cast<IdentifierSymbolEntry*>(operands[0]->getEntry())->isGlobal())
     {
         MachineOperand* internal_reg1 = genMachineVReg();
         // store r1, [r0]
@@ -792,7 +792,7 @@ void CallInstruction::genMachineCode(AsmBuilder* builder){
             dst1=genMachineReg(i);
             operand=genMachineOperand(operands[i+1]);
             //判断是否是立即数
-            if (operand->isImm()){
+            if (operand->isImm() && operand->getVal()<255){
                 cur_inst=new LoadMInstruction(cur_block, dst1, operand);
             } 
             else{

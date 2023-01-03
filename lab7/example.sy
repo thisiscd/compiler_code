@@ -1,6 +1,7 @@
-// test hexadecimal define
-int main(){
-    int a;
-    a = 0xf;
-    return a;
+int func(int p, int q){
+	return p + q;
+}
+void main(){
+	func(1, 2);
+	return;
 }
