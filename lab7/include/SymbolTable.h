@@ -84,10 +84,14 @@ private:
     Operand *addr;  // The address of the identifier.
     // You can add any field you need here.
     bool constant;
+    int paramNo;
     int value;
+    // 数组相关
+    int* arrayValue;
+    bool allZero;
 
 public:
-    IdentifierSymbolEntry(Type *type, std::string name, int scope);
+    IdentifierSymbolEntry(Type *type, std::string name, int scope, int paramNo=-1);
     virtual ~IdentifierSymbolEntry() {};
     std::string toStr();
     bool isGlobal() const {return scope == GLOBAL;};
@@ -100,8 +104,19 @@ public:
     bool inited;
     void setConst();
     bool getConst(){return constant;};
+    int getParamNo(){return paramNo;};
     int getValue();
     bool setValue(int value);
+    // 数组相关
+    void setArrayValue(int* arrayValue)
+    {
+        /* 暂时不考虑常量的话 */
+        this->arrayValue = arrayValue;
+    }
+    ;
+    int* getArrayValue() const { return arrayValue; };
+    void setAllZero() { allZero = true; };
+    bool isAllZero() const { return allZero; };
 };
 
 
