@@ -1,0 +1,3 @@
+syntax error
+timeout: the monitored command dumped core
+Segmentation fault

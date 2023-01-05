@@ -1,0 +1,4 @@
+test/lab6/08_cond_test.ll:28:1: error: expected instruction opcode
+B33:                                    ; preds = %B32, %B34
+^
+1 error generated.
