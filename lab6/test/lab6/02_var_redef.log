@@ -1,4 +1,0 @@
-identifier b is redefined
-compiler: src/parser.y:373: int yyparse(): Assertion `!a' failed.
-timeout: the monitored command dumped core
-Aborted
