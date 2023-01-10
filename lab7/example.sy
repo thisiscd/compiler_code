@@ -1,6 +1,6 @@
 
 int main()
 {
-    if(3>4==0){}
+    if(1==0x66<=077){ putch(69); }
     return 0;
 }
