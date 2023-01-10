@@ -1,6 +1,7 @@
 %code top{
     #include <iostream>
     #include <assert.h>
+    #include <stack>
     #include "parser.h"
     extern Ast ast;
     int yylex();
@@ -8,6 +9,7 @@
     Type* declType;
     int paramCount=0;
     ArrayType* arrayType;
+    std::stack<StmtNode*> WhileStmts;
 }
 
 %code requires {
@@ -115,6 +117,9 @@ BlockStmt
             identifiers = identifiers->getPrev();
             delete top;
         }
+    |LBRACE RBRACE{
+        $$=new CompoundStmt(nullptr);
+    }
     ;
 IfStmt
     : IF LPAREN Cond RPAREN Stmt %prec THEN {
@@ -137,20 +142,25 @@ ReturnStmt
     ;
 WhileStmt
     :
-    WHILE LPAREN Cond RPAREN Stmt{
-        $$ = new WhileStmt($3, $5);
+    WHILE LPAREN Cond RPAREN{
+        StmtNode* st=new WhileStmt($3,nullptr);
+        WhileStmts.push(st);
+    } Stmt{
+        ((WhileStmt*)(WhileStmts.top()))->setStmt($6);
+        $$ = WhileStmts.top();
+        WhileStmts.pop();
     }
     ;
 BreakStmt
     : 
     BREAK SEMICOLON{
-        $$ = new BreakStmt();
+        $$ = new BreakStmt(WhileStmts.top());
     }
     ;
 ContinueStmt
     : 
     CONTINUE SEMICOLON{
-        $$ = new ContinueStmt();
+        $$ = new ContinueStmt(WhileStmts.top());
     }
     ;
 Exp
@@ -364,7 +374,7 @@ VarDef
         SymbolEntry* se;
         se = new IdentifierSymbolEntry(declType, $1, identifiers->getLevel());
         bool a=false;
-        if(!identifiers->lookup($1)){
+        if(!identifiers->lookup_cur_block($1)){
             identifiers->install($1, se);
             a=false;    
         }
@@ -387,7 +397,7 @@ VarDef
         se = new IdentifierSymbolEntry(declType, $1, identifiers->getLevel());
         ((IdentifierSymbolEntry*)se)->setValue($3->getValue());
         bool a=false;
-        if(!identifiers->lookup($1)){
+        if(!identifiers->lookup_cur_block($1)){
             identifiers->install($1, se);
             a=false;    
         }

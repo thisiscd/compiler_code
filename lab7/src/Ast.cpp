@@ -4,6 +4,7 @@
 #include "Instruction.h"
 #include "IRBuilder.h"
 #include <string>
+#include <queue>
 #include "Type.h"
 
 extern Unit unit;
@@ -12,6 +13,7 @@ extern FILE *yyout;
 int Node::counter = 0;
 IRBuilder *Node::builder = nullptr;
 bool isreturn=false;
+std::queue<bool>isreturn_queue;
 
 Node::Node()
 {
@@ -109,6 +111,58 @@ void FunctionDef::genCode()
      * Construct control flow graph. You need do set successors and predecessors for each basic block.
      * Todo
      */
+    for (auto block = func->begin(); block != func->end(); block++)
+    {
+        //获取该块的最后一条指令
+        Instruction* i = (*block)->begin();
+        Instruction* last = (*block)->rbegin();
+        //从块中删除条件型语句
+        while (i != last) {
+            if (i->isCond() || i->isUncond()) {
+                (*block)->remove(i);
+            }
+            i = i->getNext();
+        }
+        
+        if (last->isCond()) {
+            BasicBlock *truebranch, *falsebranch;
+            truebranch = dynamic_cast<CondBrInstruction*>(last)->getTrueBranch();
+            falsebranch = dynamic_cast<CondBrInstruction*>(last)->getFalseBranch();
+            
+            (*block)->addSucc(truebranch);
+            (*block)->addSucc(falsebranch);
+            truebranch->addPred(*block);
+            falsebranch->addPred(*block);
+        } 
+        else if (last->isUncond())  //无条件跳转指令可获取跳转的目标块
+        {
+            BasicBlock* dst =
+                dynamic_cast<UncondBrInstruction*>(last)->getBranch();
+            (*block)->addSucc(dst);
+            //如果无条件跳转的目标块为空 那么就插入return
+            dst->addPred(*block);
+            if (dst->empty()) {
+                if (((FunctionType*)(se->getType()))->getRetType() == TypeSystem::intType)
+                    new RetInstruction(new Operand(new ConstantSymbolEntry( TypeSystem::intType, 0)), dst);
+                else if (((FunctionType*)(se->getType()))->getRetType() == TypeSystem::voidType)
+                    new RetInstruction(nullptr, dst);
+            }
+        }
+    }
+
+    SymbolEntry *se = this->getSymbolEntry();
+    Type *ret = ((FunctionType *)(se->getType()))->getRetType();
+            //std::cout<<isreturn_queue.front()<<std::endl;
+    if(!isreturn_queue.front() && ret == TypeSystem::voidType){//没有return且函数为空，加上return语句
+            BasicBlock* ret_bb = builder->getInsertBB();
+            Operand* src=nullptr;
+            // if(retValue){
+            //     retValue->genCode();
+            //     src=retValue->getOperand();
+            // }
+            new RetInstruction(src,ret_bb);
+        }
+        isreturn_queue.pop();
 }
 
 void BinaryExpr::genCode()
@@ -118,8 +172,8 @@ void BinaryExpr::genCode()
     if (op == AND)
     {
         BasicBlock *trueBB = new BasicBlock(func); // if the result of lhs is true, jump to the trueBB.
-        trueBB->addPred(bb);//放置这个基本块，设置前驱后继
-        bb->addSucc(trueBB);
+        // trueBB->addPred(bb);//放置这个基本块，设置前驱后继
+        // bb->addSucc(trueBB);
         //判断如果是int型则转化为bool
         
         if(!expr1->getSymPtr()->isVariable()&& expr1->getOperand()->getType()->isInt()){
@@ -140,8 +194,8 @@ void BinaryExpr::genCode()
     {
         // Todo 
         BasicBlock* falseBB = new BasicBlock(func);
-        falseBB->addPred(bb);
-        bb->addSucc(falseBB);
+        // falseBB->addPred(bb);
+        // bb->addSucc(falseBB);
         //判断如果是int型则转化为bool
         if(expr1->getOperand()->getType()->isInt()){
             expr1->int2Bool();
@@ -225,11 +279,15 @@ void BinaryExpr::genCode()
 
         // need modify
         //正确错误列表合并
-        true_list = merge(expr1->trueList(), expr2->trueList());
-        false_list = merge(expr1->falseList(), expr2->falseList());
+        //true_list = merge(expr1->trueList(), expr2->trueList());
+        //false_list = merge(expr1->falseList(), expr2->falseList());
         //条件跳转指令
-        Instruction* temp = new CondBrInstruction(nullptr,nullptr,dst,bb);
+        BasicBlock *truebb = new BasicBlock(func);
+        BasicBlock *falsebb = new BasicBlock(func);
+        BasicBlock *tempbb = new BasicBlock(func);
+        Instruction* temp = new CondBrInstruction(truebb,tempbb,dst,bb);
         this->trueList().push_back(temp);
+        temp=new UncondBrInstruction(falsebb, tempbb);
         this->falseList().push_back(temp);
     }
 }
@@ -356,6 +414,42 @@ void IdList::genCode(){
 
 }
 
+Int2BoolExpr::Int2BoolExpr(ExprNode* expr) : ExprNode(nullptr), expr(expr) 
+{
+    symbolEntry = new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel());
+    dst = new Operand(symbolEntry);
+}
+
+void Int2BoolExpr::genCode(){
+    expr->genCode();
+    BasicBlock* bb = builder->getInsertBB();
+    Function* func = bb->getParent();
+    Instruction* cur_inst;
+    BasicBlock* tempbb = new BasicBlock(func);
+    BasicBlock* trueBB = new BasicBlock(func);
+    BasicBlock* falseBB = new BasicBlock(func);
+
+    Operand* src=new Operand(new ConstantSymbolEntry(TypeSystem::intType, 0));
+    new CmpInstruction(CmpInstruction::NE, this->dst, this->expr->getOperand(),src , bb);
+    cur_inst=new CondBrInstruction(trueBB, tempbb, this->dst, bb);
+    this->trueList().push_back(cur_inst);
+    cur_inst=new UncondBrInstruction(falseBB, tempbb);
+    this->falseList().push_back(cur_inst);
+}
+
+IfStmt::IfStmt(ExprNode *cond, StmtNode *thenStmt) : cond(cond), thenStmt(thenStmt){
+        Type* t = cond->getSymPtr()->getType();
+        if (t->isInt() && ((IntType*) t)->getSize() == 32) 
+        {
+            Int2BoolExpr* temp = new Int2BoolExpr(cond);
+            this->cond = temp;
+        }
+        if(t->isFunc()&&((FunctionType*)t)->getRetType()->isInt()){
+            Int2BoolExpr* temp = new Int2BoolExpr(cond);
+            this->cond = temp;
+        }
+    };
+
 void IfStmt::genCode()
 {
     Function *func;
@@ -366,15 +460,17 @@ void IfStmt::genCode()
     end_bb = new BasicBlock(func);
     //printf("label: %d, label: %d\n", then_bb->getNo(), end_bb->getNo());
 
-    then_bb -> addPred(builder->getInsertBB());//设置其前驱
-    builder -> getInsertBB() -> addSucc(then_bb);//设置后继
-    end_bb -> addPred(then_bb);
-    then_bb -> addSucc(end_bb);//
+    // then_bb -> addPred(builder->getInsertBB());//设置其前驱
+    // builder -> getInsertBB() -> addSucc(then_bb);//设置后继
+    // end_bb -> addPred(then_bb);
+    // then_bb -> addSucc(end_bb);//
 
     Type* t = cond->getSymPtr()->getType();
+    //std::cout<<"unary"<<std::endl;
     if(t->isInt() && ((IntType*) t)->getSize() == 32){
         cond->int2Bool();
     }
+    
     cond->genCode();
     backPatch(cond->trueList(), then_bb);
     backPatchFalse(cond->falseList(), end_bb);
@@ -400,35 +496,18 @@ void IfElseStmt::genCode()
     end_bb = new BasicBlock(func);
 
     //设置前驱后继
-    then_bb -> addPred(builder -> getInsertBB());
-    builder -> getInsertBB() -> addSucc(then_bb);
+    // then_bb -> addPred(builder -> getInsertBB());
+    // builder -> getInsertBB() -> addSucc(then_bb);
 
-    else_bb -> addPred(builder -> getInsertBB());
-    builder -> getInsertBB() -> addSucc(else_bb);
+    // else_bb -> addPred(builder -> getInsertBB());
+    // builder -> getInsertBB() -> addSucc(else_bb);
 
-    end_bb -> addPred(then_bb);
-    then_bb -> addSucc(end_bb);
-    end_bb -> addPred(else_bb);
-    else_bb -> addSucc(end_bb);
+    // end_bb -> addPred(then_bb);
+    // then_bb -> addSucc(end_bb);
+    // end_bb -> addPred(else_bb);
+    // else_bb -> addSucc(end_bb);
 
     cond->genCode();
-    Type* temp = cond->getSymPtr()->getType();
-    //下面判断只对单目运算式有效
-    if(temp->isInt() && ((IntType*) temp)->getSize() == 32){
-        BasicBlock* bb=cond->builder->getInsertBB();
-        Operand *src = cond->getOperand();
-        SymbolEntry *se = new ConstantSymbolEntry(TypeSystem::intType, 0);
-        Constant* digit = new Constant(se);
-        cond->int2Bool();
-        //cmp指令
-        CmpInstruction* temp1 = new CmpInstruction(CmpInstruction::NE, cond->dst, src, digit->getOperand(), bb);
-        cond->trueList().push_back(temp1);//更新列表
-        cond->falseList().push_back(temp1);
-        //条件跳转指令
-        Instruction* temp2 = new CondBrInstruction(nullptr,nullptr,cond->dst,bb);
-        cond->trueList().push_back(temp2);
-        cond->falseList().push_back(temp2);
-    }
 
     backPatch(cond->trueList(),then_bb);
     backPatchFalse(cond->falseList(),else_bb);
@@ -482,8 +561,6 @@ void DeclStmt::genCode()
             if(ids->assignlist.size()>0&&ids->assignlist[j]){//如果有预先赋值
                 //std::cout<<"i"<<std::endl;
                 //获取赋的值
-                //se->setValue(ids->assignlist[j])
-                //std::cout<<ids->assignlist[j]->expr->getSymPtr()->toStr()<<std::endl;
                 AssignStmt* assign=ids->assignlist[j];
                 assign -> genCode();
                 src = assign-> expr -> getOperand();
@@ -569,14 +646,16 @@ void CallExpr::genCode()
         temp = ((ExprNode*)temp->getNext());
     }
     BasicBlock* bb = builder->getInsertBB();
-    Type* retType = symbolEntry->getType();
+    Type* retType = ((FunctionType*)symbolEntry->getType())->getRetType();
     if(!retType->isVoid())
     {
         Type *type2 = new IntType(32);  // temp register for function retValue
         SymbolEntry *addr_se2 = new TemporarySymbolEntry(type2, SymbolTable::getLabel());
         dst = new Operand(addr_se2);
     }
-    //std::cout<<this->type->toStr()<<std::endl;
+    else{
+        dst=nullptr;
+    }
     new CallInstruction(dst, symbolEntry, operands, bb);
 }
 
@@ -643,36 +722,23 @@ void WhileStmt::genCode()
     end_bb = new BasicBlock(func);
     cond_bb = new BasicBlock(func);
 
+    this->cond_bb = cond_bb;
+    this->end_bb = end_bb;
+
     new UncondBrInstruction(cond_bb, builder -> getInsertBB());
     //设置前驱后继
-    cond_bb -> addPred(builder -> getInsertBB());
-    builder -> getInsertBB() -> addSucc(cond_bb);
-    loop_bb -> addPred(cond_bb);
-    cond_bb -> addSucc(loop_bb);
-    end_bb -> addPred(loop_bb);
-    loop_bb -> addSucc(end_bb);
+    // cond_bb -> addPred(builder -> getInsertBB());
+    // builder -> getInsertBB() -> addSucc(cond_bb);
+    // loop_bb -> addPred(cond_bb);
+    // cond_bb -> addSucc(loop_bb);
+    // end_bb -> addPred(loop_bb);
+    // loop_bb -> addSucc(end_bb);
 
-    end_bb -> addPred(cond_bb);
-    cond_bb -> addSucc(end_bb);
+    // end_bb -> addPred(cond_bb);
+    // cond_bb -> addSucc(end_bb);
 
     builder->setInsertBB(cond_bb);
     cond -> genCode();
-    Type* t = cond->getSymPtr()->getType();
-    if(t->isInt() && ((IntType*) t)->getSize() == 32){
-        BasicBlock* bb=cond->builder->getInsertBB();
-        Operand *src = cond->getOperand();
-        SymbolEntry *se = new ConstantSymbolEntry(TypeSystem::intType, 0);
-        Constant* digit = new Constant(se);
-        cond->int2Bool();
-        //cmp指令
-        CmpInstruction* temp1 = new CmpInstruction(CmpInstruction::NE, cond->dst, src, digit->getOperand(), bb);
-        cond->trueList().push_back(temp1);//更新列表
-        cond->falseList().push_back(temp1);
-        //条件跳转指令
-        Instruction* temp2 = new CondBrInstruction(nullptr,nullptr,cond->dst,bb);
-        cond->trueList().push_back(temp2);
-        cond->falseList().push_back(temp2);
-    }
 
     backPatch(cond -> trueList(), loop_bb);
     backPatchFalse(cond -> falseList(), end_bb);
@@ -684,8 +750,24 @@ void WhileStmt::genCode()
     builder->setInsertBB(end_bb);
 }
 
-void BreakStmt::genCode(){}
-void ContinueStmt::genCode(){}
+void BreakStmt::genCode(){
+    Function* func = builder->getInsertBB()->getParent();
+    BasicBlock* bb = builder->getInsertBB();
+    BasicBlock* end_bb = ((WhileStmt*)this->stmt)->end_bb;
+    new UncondBrInstruction(end_bb, bb);
+    BasicBlock* next_bb = new BasicBlock(func);
+    builder->setInsertBB(next_bb);
+}
+
+void ContinueStmt::genCode(){
+    Function* func = builder->getInsertBB()->getParent();
+    BasicBlock* bb = builder->getInsertBB();
+    BasicBlock* cond_bb = ((WhileStmt*)this->stmt)->cond_bb;
+    new UncondBrInstruction(cond_bb, bb);
+    BasicBlock* next_bb = new BasicBlock(func);
+    builder->setInsertBB(next_bb);
+}
+
 void BreakStmt::typeCheck(Type* retType){}
 void ContinueStmt::typeCheck(Type* retType){}
 
@@ -728,6 +810,9 @@ void Ast::typeCheck(Type* retType)
 void FunctionDef::typeCheck(Type* retType)
 {
     // Todo
+    isreturn=false;
+    isreturn_queue.push(false);
+    
     SymbolEntry *se = this->getSymbolEntry();
     Type *ret = ((FunctionType *)(se->getType()))->getRetType();
     if (stmt == nullptr&&ret != TypeSystem::voidType)//函数内容为空
@@ -737,6 +822,8 @@ void FunctionDef::typeCheck(Type* retType)
     }
     else{
         stmt->typeCheck(ret);
+        if(isreturn)
+            isreturn_queue.back()=true;
         if(!isreturn && ret != TypeSystem::voidType){//函数没有return语句
             fprintf(stderr, "返回值不为空的函数\'%s\'缺少return语句。\n",se->toStr().c_str());
             exit(EXIT_FAILURE);
@@ -750,16 +837,15 @@ void BinaryExpr::typeCheck(Type* retType)
     expr1->typeCheck(retType);
     expr2->typeCheck(retType);
     Type *type1 = expr1->getSymPtr()->getType();
-    Type *type2 = expr2->getSymPtr()->getType();
-/*
-    if (!type1->equal(type2))
-    {
-        fprintf(stderr, "类型为 %s 的变量 %s 和类型为 %s 的变量 %s不匹配。\n",
-                type1->toStr().c_str(), expr1->getSymPtr()->toStr().c_str(),
-                type2->toStr().c_str(), expr2->getSymPtr()->toStr().c_str());
-        exit(EXIT_FAILURE);
-    }
-*/
+    // Type *type2 = expr2->getSymPtr()->getType();
+
+    // if (!type1->equal(type2))
+    // {
+    //     fprintf(stderr, "类型为 %s 的变量 %s 和类型为 %s 的变量 %s不匹配。\n",
+    //             type1->toStr().c_str(), expr1->getSymPtr()->toStr().c_str(),
+    //             type2->toStr().c_str(), expr2->getSymPtr()->toStr().c_str());
+    //     exit(EXIT_FAILURE);
+    // }
     if(expr1->getType()){
         if(expr1->getType()->isVoid()){
             fprintf(stderr, "类型为空的表达式 %s 不能进行运算。\n",
@@ -982,7 +1068,7 @@ CallExpr::CallExpr(SymbolEntry *se, ExprNode *param /*=NULL*/) : ExprNode(se), p
         temp = (ExprNode *)(temp->getNext());
         paramnum++;
     }
-    FunctionType* type=(FunctionType*)s->getType();
+    FunctionType* type = (FunctionType*)s->getType();
     int paramsize=type->paramsType.size();
 
     this->type=((FunctionType*)s->getType())->getRetType();
