@@ -1,6 +1,7 @@
 #include "MachineCode.h"
-#include"Type.h"
-#include<iostream>
+#include "Type.h"
+#include <iostream>
+#include <string.h>
 extern FILE* yyout;
 
 MachineOperand::MachineOperand(int tp, int val)
@@ -437,7 +438,8 @@ std::vector<MachineOperand*> MachineFunction::getSavedRegs()
 
 void MachineFunction::output()
 {
-    const char *func_name = this->sym_ptr->toStr().c_str()+1;
+    char *func_name=new char[strlen(this->sym_ptr->toStr().c_str())];
+    strcpy(func_name,this->sym_ptr->toStr().c_str()+1);
     fprintf(yyout, "\t.global %s\n", func_name);
     fprintf(yyout, "\t.type %s , %%function\n", func_name);
     fprintf(yyout, "%s:\n", func_name);
@@ -481,17 +483,51 @@ void MachineUnit::PrintGlobalDecl()
             fprintf(yyout, ".global %s\n", se->toStr().c_str());
             fprintf(yyout, "\t.size %s, %d\n", se->toStr().c_str(), se->getType()->size/8);
             fprintf(yyout, "%s:\n", se->toStr().c_str());
-            fprintf(yyout, "\t.word %d\n", se->getValue());
+            if(!se->getType()->isArray())
+            {
+                fprintf(yyout, "\t.word %d\n", se->getValue());
+            }
+            else
+            {
+                int n = se->getType()->getSize() / 32;
+                Type* arrTy = ((ArrayType*)(se->getType()))->getElementType();
+
+                while (!arrTy->isInt()) {
+                    arrTy = ((ArrayType*)(arrTy))->getElementType();
+                }  // TODO: fix problems of arrays;
+
+                int* p = se->getArrayValue();
+                for (int i = 0; i < n; i++) {
+                    fprintf(yyout, "\t.word %d\n", (int)p[i]);
+                }
+            }
         }
     }
     if(constGlobal_list.empty()==false){
         fprintf(yyout, ".section .rodata\n");
         for(auto con:constGlobal_list){
             IdentifierSymbolEntry* se=con;
-            fprintf(yyout, ".global %s\n", se->toStr().c_str());
+            fprintf(yyout, "\t.global %s\n", se->toStr().c_str());
             fprintf(yyout, "\t.size %s, %d\n", se->toStr().c_str(), se->getType()->size/ 8);
             fprintf(yyout, "%s:\n", se->toStr().c_str());
-            fprintf(yyout, "\t.word %d\n", se->getValue());
+            if(!se->getType()->isArray())
+            {
+                fprintf(yyout, "\t.word %d\n", se->getValue());
+            }
+            else
+            {
+                int n = se->getType()->getSize() / 32;
+                Type* arrTy = ((ArrayType*)(se->getType()))->getElementType();
+
+                while (!arrTy->isInt()) {
+                    arrTy = ((ArrayType*)(arrTy))->getElementType();
+                }  // TODO: fix problems of arrays;
+
+                int* p = se->getArrayValue();
+                for (int i = 0; i < n; i++) {
+                    fprintf(yyout, "\t.word %d\n", (int)p[i]);
+                }
+            }
         }
     }
 }

@@ -1298,3 +1298,45 @@ int Id::getValue()
 {
     return ((IdentifierSymbolEntry*)symbolEntry)->getValue();
 }
+
+void InitValueListExpr::addExpr(ExprNode *expr)
+{
+    if (this->expr == nullptr) {
+        if(childCnt != 0) { printf("childCnt != 0\n"); exit(-1); }
+        childCnt++;
+        this->expr = expr;
+    } else {
+        childCnt++;
+        this->expr->setNext(expr);
+    }
+}
+
+bool InitValueListExpr::isFull()
+{
+    ArrayType* type = (ArrayType*)(this->symbolEntry->getType());
+    return childCnt == type->getLength();
+}
+
+void InitValueListExpr::fill()
+{
+    if (allZero) {
+        return;
+    }
+    Type* type = ((ArrayType*)(this->getType()))->getElementType();
+    if (type->isArray()) {
+        while (!isFull()) {
+            this->addExpr(new InitValueListExpr(new ConstantSymbolEntry(type)));
+        }
+        ExprNode* temp = expr;
+        while (temp) {
+            ((InitValueListExpr*)temp)->fill();
+            temp = (ExprNode*)(temp->getNext());
+        }
+    }
+    if (type->isInt()) {
+        while (!isFull()) {
+            this->addExpr(new Constant(new ConstantSymbolEntry(type, 0)));
+        }
+        return;
+    }
+}

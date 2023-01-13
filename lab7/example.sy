@@ -1,9 +1,5 @@
-int maxArea(int height[]) {
-  return 0;
-}
+const int a[5]={0,1,2,3,4};
 
 int main(){
-    int a[10];
-    maxArea(a);
-    return 0;
+    return a[4];
 }

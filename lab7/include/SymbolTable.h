@@ -50,6 +50,7 @@ public:
     int getValue() const {return value;};
     std::string toStr();
     // You can add any function you need here.
+    ConstantSymbolEntry(Type* type): SymbolEntry(type, SymbolEntry::CONSTANT) {};
 };
 
 
@@ -89,6 +90,7 @@ private:
     // 数组相关
     int* arrayValue;
     bool allZero;
+    int notZeroNum;
 
 public:
     IdentifierSymbolEntry(Type *type, std::string name, int scope, int paramNo=-1);
@@ -117,6 +119,8 @@ public:
     int* getArrayValue() const { return arrayValue; };
     void setAllZero() { allZero = true; };
     bool isAllZero() const { return allZero; };
+    int getNotZeroNum() const { return notZeroNum; }
+    void setNotZeroNum(int num) { notZeroNum = num; }
 };
 
 
