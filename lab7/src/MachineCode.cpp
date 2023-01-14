@@ -249,6 +249,21 @@ StoreMInstruction::StoreMInstruction(MachineBlock* p,
 void StoreMInstruction::output()
 {
     // TODO
+    MachineOperand* operand = use_list[0];
+    if (operand->isReg() && operand->getReg() == 3) {
+        if(reg3){
+            reg3 = false;
+        }
+        else{
+            auto fp = new MachineOperand(MachineOperand::REG, 11);
+            auto r3 = new MachineOperand(MachineOperand::REG, 3);
+            auto off = new MachineOperand(MachineOperand::IMM, fpStkOffset);
+            fpStkOffset += 4;
+            auto cur_inst = new LoadMInstruction(parent, r3, fp, off);
+            cur_inst->output();
+        }
+    }
+
     fprintf(yyout, "\tstr ");
     this->use_list[0]->output();
     fprintf(yyout, ", ");
@@ -316,6 +331,7 @@ void BranchMInstruction::output()
             break;
         case BX:
         {
+            //
             auto fp = new MachineOperand(MachineOperand::REG, 11);
             auto lr = new MachineOperand(MachineOperand::REG, 14);
             auto cur_inst = new StackMInstrcuton(this->getParent(), StackMInstrcuton::POP, this->getParent()->getParent()->getSavedRegs(), fp, lr);
@@ -421,9 +437,14 @@ MachineFunction::MachineFunction(MachineUnit* p, SymbolEntry* sym_ptr)
 
 void MachineBlock::output()
 {
+    fpStkOffset = (parent->getSavedRegs().size() + 2) * 4;
+    reg3 = true;
+
     fprintf(yyout, ".L%d:\n", this->no);
     for(auto iter : inst_list)
+    {
         iter->output();
+    }
 }
 //获得整数vector代表的寄存器信息
 std::vector<MachineOperand*> MachineFunction::getSavedRegs() 
@@ -438,7 +459,7 @@ std::vector<MachineOperand*> MachineFunction::getSavedRegs()
 
 void MachineFunction::output()
 {
-    char *func_name=new char[strlen(this->sym_ptr->toStr().c_str())];
+    char *func_name=new char[strlen(this->sym_ptr->toStr().c_str())];// = this->sym_ptr->toStr().c_str()+1;
     strcpy(func_name,this->sym_ptr->toStr().c_str()+1);
     fprintf(yyout, "\t.global %s\n", func_name);
     fprintf(yyout, "\t.type %s , %%function\n", func_name);
@@ -461,6 +482,21 @@ void MachineFunction::output()
     cur_inst->output();
     cur_inst=new BinaryMInstruction(nullptr, BinaryMInstruction::SUB, sp, sp, new MachineOperand(MachineOperand::IMM, AllocSpace(0)));
     cur_inst->output();
+
+    // int offset=AllocSpace(0);
+    // if(offset!=0){
+    //     MachineOperand* size = new MachineOperand(MachineOperand::IMM, offset);
+    //     if (offset < -255 || offset > 255) {//偏移量太大
+    //         MachineOperand* r4 = new MachineOperand(MachineOperand::REG, 4);
+    //         cur_inst=new LoadMInstruction(nullptr, r4, size);
+    //         cur_inst->output();
+    //         cur_inst=new BinaryMInstruction(nullptr, BinaryMInstruction::SUB, sp, sp,r4);
+    //         cur_inst->output();
+    //     } else {
+    //         cur_inst=new BinaryMInstruction(nullptr, BinaryMInstruction::SUB, sp, sp, size);
+    //         cur_inst->output();
+    //     }
+    // }
     for(auto iter : block_list)
         iter->output();
     fprintf(yyout, "\n");
@@ -473,11 +509,16 @@ void MachineUnit::PrintGlobalDecl()
     if(!global_list.empty()){
         fprintf(yyout,"\t.data\n");
     }
-    std::vector<IdentifierSymbolEntry*> constGlobal_list;
+    std::vector<IdentifierSymbolEntry*> Global_list;
+    std::vector<IdentifierSymbolEntry*> Global_array_list;
     for(auto global:global_list){
         IdentifierSymbolEntry* se = (IdentifierSymbolEntry*)global;
         if(se->getConst()){//constId
-            constGlobal_list.push_back(se);
+            Global_list.push_back(se);
+        }
+        else if(se->isAllZero()){
+            //std::cout<<"allzero"<<std::endl;
+            Global_array_list.push_back(se);
         }
         else{//变量
             fprintf(yyout, ".global %s\n", se->toStr().c_str());
@@ -494,7 +535,7 @@ void MachineUnit::PrintGlobalDecl()
 
                 while (!arrTy->isInt()) {
                     arrTy = ((ArrayType*)(arrTy))->getElementType();
-                }  // TODO: fix problems of arrays;
+                } 
 
                 int* p = se->getArrayValue();
                 for (int i = 0; i < n; i++) {
@@ -503,11 +544,11 @@ void MachineUnit::PrintGlobalDecl()
             }
         }
     }
-    if(constGlobal_list.empty()==false){
+    if(Global_list.empty()==false){
         fprintf(yyout, ".section .rodata\n");
-        for(auto con:constGlobal_list){
+        for(auto con:Global_list){
             IdentifierSymbolEntry* se=con;
-            fprintf(yyout, "\t.global %s\n", se->toStr().c_str());
+            fprintf(yyout, ".global %s\n", se->toStr().c_str());
             fprintf(yyout, "\t.size %s, %d\n", se->toStr().c_str(), se->getType()->size/ 8);
             fprintf(yyout, "%s:\n", se->toStr().c_str());
             if(!se->getType()->isArray())
@@ -521,12 +562,20 @@ void MachineUnit::PrintGlobalDecl()
 
                 while (!arrTy->isInt()) {
                     arrTy = ((ArrayType*)(arrTy))->getElementType();
-                }  // TODO: fix problems of arrays;
+                } 
 
                 int* p = se->getArrayValue();
                 for (int i = 0; i < n; i++) {
                     fprintf(yyout, "\t.word %d\n", (int)p[i]);
                 }
+            }
+        }
+    }
+    if(Global_array_list.empty()==false){
+        for (auto a : Global_array_list) {
+            IdentifierSymbolEntry* se = a;
+            if (se->getType()->isArray()) {
+                fprintf(yyout, "\t.comm %s, %d, 4\n", se->toStr().c_str(),se->getType()->getSize() / 8);
             }
         }
     }

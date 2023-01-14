@@ -147,14 +147,17 @@ class TemporarySymbolEntry : public SymbolEntry
 private:
     int stack_offset;
     int label;
+    int para_No=-1;
 public:
     TemporarySymbolEntry(Type *type, int label);
+    TemporarySymbolEntry(Type *type, int label,int para_No);
     virtual ~TemporarySymbolEntry() {};
     std::string toStr();
     int getLabel() const {return label;};
     void setOffset(int offset) { this->stack_offset = offset; };
     int getOffset() { return this->stack_offset; };
     // You can add any function you need here.
+    int getParamNo(){return para_No;};
 };
 
 // symbol table managing identifier symbol entries

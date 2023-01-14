@@ -495,6 +495,7 @@ VarDef
             assert( !a);
         }
         tem->idlist.push_back(new Id(se));
+        tem->assignlist.push_back(nullptr);
         $$=(StmtNode*)tem;
         delete []$1;
     }
@@ -857,6 +858,7 @@ FuncDef
     {
         Type *funcType = new FunctionType($1,{});
         SymbolEntry *se = new IdentifierSymbolEntry(funcType, $2, identifiers->getLevel());
+        //std::cout<<se->toStr()<<std::endl;
         bool a=false;
         if(!identifiers->lookup($2)){
             identifiers->install($2, se);

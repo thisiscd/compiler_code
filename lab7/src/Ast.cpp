@@ -81,28 +81,31 @@ void FunctionDef::genCode()
     // set the insert point to the entry basicblock of this function.
     builder->setInsertBB(entry);
 
-    if(ids!=nullptr)
-    for(unsigned long int j=0;j<ids->idlist.size();j++){
-        IdentifierSymbolEntry *se = dynamic_cast<IdentifierSymbolEntry *>(ids->idlist[j]->getSymPtr());
-        //std::cout<<se->getScope()<<std::endl;
-        Function *func = builder->getInsertBB()->getParent();
-        BasicBlock *entry = func->getEntry();
-        Operand *addr;
-        SymbolEntry *addr_se;
-        Type *type;
-        type = new PointerType(se->getType());
-        addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel());//临时符号表
-        addr = new Operand(addr_se);
-        Instruction *alloca = new AllocaInstruction(addr, se); // alloca指令
-        entry->insertFront(alloca);               // allocate instructions should be inserted into the begin of the entry block.
-        
-        Operand *addr2 = new Operand(ids->idlist[j]->getSymPtr());
+    if(ids!=nullptr){
+        for(unsigned long int j=0;j<ids->idlist.size();j++){
+            // if(j==4)
+            //     break;
+            IdentifierSymbolEntry *se = dynamic_cast<IdentifierSymbolEntry *>(ids->idlist[j]->getSymPtr());
+            //std::cout<<se->getScope()<<std::endl;
+            Function *func = builder->getInsertBB()->getParent();
+            BasicBlock *entry = func->getEntry();
+            Operand *addr;
+            SymbolEntry *addr_se;
+            Type *type;
+            type = new PointerType(se->getType());
+            addr_se = new TemporarySymbolEntry(type, SymbolTable::getLabel(),j);//临时符号表
+            addr = new Operand(addr_se);
+            Instruction *alloca = new AllocaInstruction(addr, se); // alloca指令
+            entry->insertFront(alloca);               // allocate instructions should be inserted into the begin of the entry block.
+            
+            Operand *addr2 = new Operand(ids->idlist[j]->getSymPtr());
 
-        StoreInstruction *store = new StoreInstruction(addr, addr2,builder->getInsertBB());
-        se->setAddr(addr);                        // set the addr operand in symbol entry so that we can use it in subsequent code generation.
-        
-        entry -> insertBack(store);
-        func->params.push_back(addr2); 
+            StoreInstruction *store = new StoreInstruction(addr, addr2,builder->getInsertBB());
+            se->setAddr(addr);                        // set the addr operand in symbol entry so that we can use it in subsequent code generation.
+            
+            entry -> insertBack(store);
+            func->params.push_back(addr2); 
+        }
     }
 
     stmt->genCode();
@@ -149,20 +152,14 @@ void FunctionDef::genCode()
             }
         }
     }
-
-    SymbolEntry *se = this->getSymbolEntry();
-    Type *ret = ((FunctionType *)(se->getType()))->getRetType();
-            //std::cout<<isreturn_queue.front()<<std::endl;
-    if(!isreturn_queue.front() && ret == TypeSystem::voidType){//没有return且函数为空，加上return语句
-            BasicBlock* ret_bb = builder->getInsertBB();
-            Operand* src=nullptr;
-            // if(retValue){
-            //     retValue->genCode();
-            //     src=retValue->getOperand();
-            // }
-            new RetInstruction(src,ret_bb);
-        }
-        isreturn_queue.pop();
+            SymbolEntry *se = this->getSymbolEntry();
+            Type *ret = ((FunctionType *)(se->getType()))->getRetType();
+            if(!isreturn_queue.front() && ret == TypeSystem::voidType){//没有return且函数为空，加上return语句
+                    BasicBlock* ret_bb = builder->getInsertBB();
+                    Operand* src=nullptr;
+                    new RetInstruction(src,ret_bb);
+                }
+            isreturn_queue.pop();
 }
 
 void BinaryExpr::genCode()
@@ -466,7 +463,6 @@ void IfStmt::genCode()
     // then_bb -> addSucc(end_bb);//
 
     Type* t = cond->getSymPtr()->getType();
-    //std::cout<<"unary"<<std::endl;
     if(t->isInt() && ((IntType*) t)->getSize() == 32){
         cond->int2Bool();
     }
@@ -674,6 +670,20 @@ void UnaryExpr::genCode()
             src = temp;
         }
         new XorInstruction(dst, src, bb);
+
+        Operand* temp1 = new Operand(new TemporarySymbolEntry(TypeSystem::boolType, SymbolTable::getLabel()));
+        new CmpInstruction(CmpInstruction::NE, temp1, src, new Operand(new ConstantSymbolEntry(TypeSystem::intType, 1)), bb);
+        BasicBlock* bb = builder->getInsertBB();
+        Function* func = bb->getParent();
+        BasicBlock *truebb = new BasicBlock(func);
+        BasicBlock *falsebb = new BasicBlock(func);
+        BasicBlock *tempbb = new BasicBlock(func);
+        Instruction* temp = new CondBrInstruction(truebb,tempbb,dst,bb);
+        //this->falseList().push_back(temp);
+        this->trueList().push_back(temp);
+        temp=new UncondBrInstruction(falsebb, tempbb);
+        //this->trueList().push_back(temp);
+        this->falseList().push_back(temp);
     } 
     else if (op == SUB || op == ADD) 
     {
