@@ -236,7 +236,6 @@ UnaryExp
     }
     |
     SUB UnaryExp {
-        //std::cout<<"sub"<<std::endl;
         SymbolEntry *se = new TemporarySymbolEntry(TypeSystem::intType, SymbolTable::getLabel());
         $$ = new UnaryExpr(se, UnaryExpr::SUB, $2);
     }
@@ -518,11 +517,9 @@ VarDef
             delete [](char*)$1;
             assert( !a);
         }
-        //$$ = new DeclStmt(new Id(se));
         tem->idlist.push_back(new Id(se));
         tem->assignlist.push_back(new AssignStmt(new Id(se),$3));
         $$=(StmtNode*)tem;
-        //$$ = new Id(se);
         delete []$1;
     }
     |
@@ -597,6 +594,8 @@ VarDef
         }
         // 保存最低维数据类型
         arrayType = (ArrayType*)type;
+        idx = 0;
+        std::stack<InitValueListExpr*>().swap(stk);
         SymbolEntry* se;
         se = new IdentifierSymbolEntry(type, $1, identifiers->getLevel());
         $<se>$ = se;
@@ -664,7 +663,6 @@ ConstDef
         tem->idlist.push_back(new Id(se));
         tem->assignlist.push_back(new AssignStmt(new Id(se),$3));
         $$=(StmtNode*)tem;
-        //$$ = new DeclStmt(new Id(se));
     }
     |
     ID ArrayIndices ASSIGN {
@@ -741,7 +739,6 @@ ConstDeclStmt
     :
     CONST Type ConstDefList SEMICOLON{
         declType = $2;
-        //$$ = $3;
         $$ = new DeclStmt((IdList*)$3);
     }
     ;
@@ -797,7 +794,6 @@ FuncFParam
         }
         SymbolEntry* se;
         se = new IdentifierSymbolEntry(type, $2, identifiers->getLevel(),paramCount++);
-        //((IdentifierSymbolEntry*)se)->setAddr(new Operand(se));
         std::vector<Id*> idlist;
         std::vector<AssignStmt*> assignlist;
         IdList *tem = new IdList(idlist, assignlist); // 标识符列表

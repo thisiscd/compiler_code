@@ -550,26 +550,17 @@ void StoreInstruction::genMachineCode(AsmBuilder* builder)
     && operands[0]->getDef()
     && operands[0]->getDef()->isAlloc())
     {
-        // example: store r1, [r0, #4]
-        //auto dst = genMachineOperand(operands[0]);
+        //  store r1, [r0, #4]
         auto src1 = genMachineReg(11);
         int offset = dynamic_cast<TemporarySymbolEntry*>(operands[0]->getEntry()) ->getOffset();
         auto src2 = genMachineImm(offset);
-        // if(abs(offset) > 255)   /* 超出寻址范围 */
-        // {
-        //     /* 先加载到虚拟寄存器 再加载到对应寄存器 */
-        //     auto operand = genMachineVReg();
-        //     cur_block->InsertInst((new LoadMInstruction(cur_block, operand, src2)));
-        //     src2 = operand;
-        // }
 
-        // TemporarySymbolEntry* tse=dynamic_cast<TemporarySymbolEntry*>(operands[0]->getEntry());
-        // if(tse->getParamNo()>3){
-        //     offset = abs(dynamic_cast<TemporarySymbolEntry*>(operands[0]->getEntry())->getOffset())+4;
-        //     auto src22 = genMachineImm(offset);
-        //     cur_block->InsertInst((new LoadMInstruction(cur_block, src, src1,src22)));
-        // }
-
+        TemporarySymbolEntry* tse=dynamic_cast<TemporarySymbolEntry*>(operands[0]->getEntry());
+        if(tse->getParamNo()>3){
+            offset = abs(dynamic_cast<TemporarySymbolEntry*>(operands[0]->getEntry())->getOffset())+24;
+            auto src22 = genMachineImm(offset);
+            cur_block->InsertInst((new LoadMInstruction(cur_block, src, src1,src22)));
+        }
         cur_inst = new StoreMInstruction(cur_block, src, src1, src2);
         cur_block->InsertInst(cur_inst);
     }
@@ -658,7 +649,6 @@ void CmpInstruction::genMachineCode(AsmBuilder* builder)
 {
     // TODO
     auto cur_block = builder->getBlock();
-//    MachineOperand* dst = genMachineOperand(operands[0]);
     MachineOperand* src1 = genMachineOperand(operands[1]);
     MachineOperand* src2 = genMachineOperand(operands[2]);
     MachineInstruction* cur_inst = nullptr;
@@ -943,98 +933,84 @@ GepInstruction::~GepInstruction() {
     operands[2]->removeUse(this);
 }
 
+/*
+GEP 指令的工作是“计算地址”，本身并不进行任何数据的访问和修改。
+GEP 指令的最基本语法为 <result> = getelementptr <ty>, <ty>* <ptrval>, {<ty> <index>}*，
+其中第一个 <ty> 表示第一个索引所指向的类型，第二个 <ty> 表示后面的指针基址 <ptrval> 的类型，<ty> <index> 表示一组索引的类型和值。
+要注意索引的类型和索引指向的基本类型是不一样的，索引的类型一般为 i32 ，而索引指向的基本类型确定的是增加索引值时指针的偏移量。
+
+第一个索引不会改变返回的指针的类型，也就是说 ptrval 前面的 <ty>* 对应什么类型，返回就是什么类型；
+第一个索引的偏移量的是由第一个索引的值和第一个 ty 指定的基本类型共同确定的。
+*/
 void GepInstruction::genMachineCode(AsmBuilder* builder) {
     auto cur_block = builder->getBlock();
     MachineInstruction* cur_inst;
     auto dst = genMachineOperand(operands[0]);
     auto idx = genMachineOperand(operands[2]);
     
-    if(init){
-        if(last){//the last dimension
-            auto base = genMachineOperand(init);
-            cur_inst = new BinaryMInstruction(
-                cur_block, BinaryMInstruction::ADD, dst, base, genMachineImm(4));
-            cur_block->InsertInst(cur_inst);
-        }
-        return;
-    }
     MachineOperand* base = nullptr;
     int size;
     auto idx1 = genMachineVReg();
-    if (idx->isImm()) {
-        if (idx->getVal() < 255) {
-            cur_inst =
-                new MovMInstruction(cur_block, MovMInstruction::MOV, idx1, idx);
-        } else {
+    if (idx->isImm()) { /* 加载立即数 */
+        if (abs(idx->getVal()) < 255) { 
+            cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, idx1, idx);
+        } else {    // load 伪指令加载立即数
             cur_inst = new LoadMInstruction(cur_block, idx1, idx);
         }
         idx = new MachineOperand(*idx1);
         cur_block->InsertInst(cur_inst);
     }
-    if (paramFirst) {//if the arr is treated as params, need to get it's ptr type.
-        size =
-            ((PointerType*)(operands[1]->getType()))->getType()->getSize() / 8;
+    if (paramFirst) {   // 如果第一层参数是数组，需要获取其指针类型
+        size = ((PointerType*)(operands[1]->getType()))->getType()->getSize() / 8;  /* 获取字节大小 */
     } else {
-        if (first) {// idx is located in the first param of array.
+        if (first) {    // 否则，index 索引第一维
             base = genMachineVReg();
             // z.B. arr[a]...
-            if (operands[1]->getEntry()->isVariable() &&
-                ((IdentifierSymbolEntry*)(operands[1]->getEntry()))
-                    ->isGlobal()) {
+            if (operands[1]->getEntry()->isVariable()   /* 变量，直接加载 */
+            && ((IdentifierSymbolEntry*)(operands[1]->getEntry()))->isGlobal()) {
                 auto src = genMachineOperand(operands[1]);
                 cur_inst = new LoadMInstruction(cur_block, base, src);
-            } else {//z.B. arr[3]...
-                int offset = ((TemporarySymbolEntry*)(operands[1]->getEntry()))
-                                 ->getOffset();
-                if (abs(offset) < 255) {
-                    cur_inst =
-                        new MovMInstruction(cur_block, MovMInstruction::MOV,
-                                            base, genMachineImm(offset));
+            } else {    //如 a[1]...
+                int offset = ((TemporarySymbolEntry*)(operands[1]->getEntry())) ->getOffset();
+                if (abs(offset) < 255) {    /* 立即数，判断是否可以直接加载 */
+                    cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, base, genMachineImm(offset));
                 } else {
-                    cur_inst = new LoadMInstruction(cur_block, base,
-                                                    genMachineImm(offset));
+                    cur_inst = new LoadMInstruction(cur_block, base, genMachineImm(offset));
                 }
             }
             cur_block->InsertInst(cur_inst);
         }
-        ArrayType* type =
-            (ArrayType*)(((PointerType*)(operands[1]->getType()))->getType());
-        size = type->getElementType()->getSize() / 8;//get element type
+        ArrayType* type = (ArrayType*)(((PointerType*)(operands[1]->getType()))->getType());
+        size = type->getElementType()->getSize() / 8;   //get element type
     }
     auto size1 = genMachineVReg();
-    if (abs(size) < 255) {
-        cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, size1,
-                                       genMachineImm(size));
+    if (abs(size) < 255) { 
+        cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, size1, genMachineImm(size));
     } else {
         cur_inst = new LoadMInstruction(cur_block, size1, genMachineImm(size));
     }
     cur_block->InsertInst(cur_inst);
     auto off = genMachineVReg();
-    cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::MUL, off,
-                                      idx, size1);
+    cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::MUL, off, idx, size1);
     off = new MachineOperand(*off);
     cur_block->InsertInst(cur_inst);
-    if (paramFirst || !first) {//it is param or not the first dimension.
+    if (paramFirst || !first) { // 不是第一维
         auto arr = genMachineOperand(operands[1]);
-        cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD,
-                                          dst, arr, off);
+        cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD, dst, arr, off);
         cur_block->InsertInst(cur_inst);
-    } else {//it is in the func body and the 1st dimension.
+    } else {    // 
         auto addr = genMachineVReg();
         auto base1 = new MachineOperand(*base);
-        cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD,
-                                          addr, base1, off);
+        cur_inst = new BinaryMInstruction(cur_block, BinaryMInstruction::ADD, addr, base1, off);
         cur_block->InsertInst(cur_inst);
         addr = new MachineOperand(*addr);
-        //z.B. arr[a]
-        if (operands[1]->getEntry()->isVariable() &&
-            ((IdentifierSymbolEntry*)(operands[1]->getEntry()))->isGlobal()) {
-            cur_inst =
-                new MovMInstruction(cur_block, MovMInstruction::MOV, dst, addr);//dst=addr
-        } else {//z.B. arr[4]
+        // a[i]
+        if (operands[1]->getEntry()->isVariable()
+         && ((IdentifierSymbolEntry*)(operands[1]->getEntry()))->isGlobal()) {
+            cur_inst = new MovMInstruction(cur_block, MovMInstruction::MOV, dst, addr); //dst=addr
+        } else {    // arr[1]
             auto fp = genMachineReg(11);
-            cur_inst = new BinaryMInstruction(
-                cur_block, BinaryMInstruction::ADD, dst, fp, addr);//dst=fp+addr
+            cur_inst = new BinaryMInstruction( cur_block, BinaryMInstruction::ADD, dst, fp, addr);  //dst=fp+addr
         }
         cur_block->InsertInst(cur_inst);
     }

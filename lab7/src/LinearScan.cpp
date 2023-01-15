@@ -214,10 +214,9 @@ void LinearScan::modifyCode()
 
 /*
 1. 为其在栈内分配空间，获取当前在栈内相对FP 的偏移；
-2. 遍历其USE 指令的列表，在USE 指令前插入LoadMInstruction，将其从栈内加载到目前的虚拟寄存器中;
-3. 遍历其DEF 指令的列表，在DEF 指令后插入StoreMInstruction，将其从目前的虚拟寄存器中存到栈内;
-插入结束后，会迭代进行以上过程，重新活跃变量分析，进行寄存器分配，直至没有溢出情况出
-现。
+2. 遍历其 USE 指令的列表，在 USE 指令前插入LoadMInstruction，将其从栈内加载到目前的虚拟寄存器中;
+3. 遍历其 DEF 指令的列表，在 DEF 指令后插入StoreMInstruction，将其从目前的虚拟寄存器中存到栈内;
+插入结束后，会迭代进行以上过程，重新活跃变量分析，进行寄存器分配，直至没有溢出情况出现。
 */
 void LinearScan::genSpillCode()
 {
@@ -232,7 +231,7 @@ void LinearScan::genSpillCode()
          * 2. insert str inst after the def of vreg
          */ 
 
-        /* 获取当前在栈内相对FP的偏移 */
+        /* 为其在栈内分配空间并获取当前在栈内相对FP的偏移 */
         interval->disp = -func->AllocSpace(4);
         //获取偏移和FP寄存器的值
         auto off = new MachineOperand(MachineOperand::IMM, interval->disp);
@@ -269,7 +268,7 @@ void LinearScan::genSpillCode()
             auto temp = new MachineOperand(*def);
             MachineOperand* operand = nullptr;
             MachineInstruction *inst = nullptr;
-            /* 同样考虑寻址空间 */
+            /* 同样考虑寻址空间，在栈中的位移 */
             if (interval->disp > 255 || interval->disp < -255) {
                 operand = new MachineOperand(MachineOperand::VREG, SymbolTable::getLabel());
                 /* 第一步， 加载到虚拟寄存器 */
@@ -333,7 +332,7 @@ void LinearScan::spillAtInterval(Interval *interval)
         activeInterval->spill = true;
         /* 并将其占用的寄存器分配给unhandled interval */
         interval->rreg = activeInterval->rreg;
-        //额外添加 处理寄存器
+        // 添加函数占用的寄存器
         func->addSavedRegs(interval->rreg);
         /* 将unhandled interval 插入到 active 列表中。*/
         actives.push_back(interval);

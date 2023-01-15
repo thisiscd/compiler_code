@@ -83,8 +83,6 @@ void FunctionDef::genCode()
 
     if(ids!=nullptr){
         for(unsigned long int j=0;j<ids->idlist.size();j++){
-            // if(j==4)
-            //     break;
             IdentifierSymbolEntry *se = dynamic_cast<IdentifierSymbolEntry *>(ids->idlist[j]->getSymPtr());
             //std::cout<<se->getScope()<<std::endl;
             Function *func = builder->getInsertBB()->getParent();
@@ -275,9 +273,6 @@ void BinaryExpr::genCode()
         new CmpInstruction(cmpcode, dst, src1, src2, bb);
 
         // need modify
-        //正确错误列表合并
-        //true_list = merge(expr1->trueList(), expr2->trueList());
-        //false_list = merge(expr1->falseList(), expr2->falseList());
         //条件跳转指令
         BasicBlock *truebb = new BasicBlock(func);
         BasicBlock *falsebb = new BasicBlock(func);
@@ -290,9 +285,7 @@ void BinaryExpr::genCode()
 }
 
 void Constant::genCode()
-{
-    // we don't need to generate code.
-}
+{}
 
 void Id::genCode()
 {
@@ -301,7 +294,7 @@ void Id::genCode()
     Operand *addr = dynamic_cast<IdentifierSymbolEntry *>(symbolEntry)->getAddr();
     if (type->isInt())
         new LoadInstruction(dst, addr, bb);
-    // 主要思想是多维的 先把上一维度的地址找到 然后根据下标找下一个维度
+    // 主要思想是逐层寻址 先把上一维度的基址找到 然后根据下标找下一个维度
     else if(type->isArray())
     {
         //遍历维度
@@ -328,8 +321,7 @@ void Id::genCode()
                //把基址加载到tempSrc
                 if (((ArrayType*)type1)->getLength() == -1) 
                 {
-                    Operand* dst1 = new Operand(new TemporarySymbolEntry(
-                        new PointerType(type), SymbolTable::getLabel()));
+                    Operand* dst1 = new Operand(new TemporarySymbolEntry( new PointerType(type), SymbolTable::getLabel()));
                     tempSrc = dst1;//中间变量
                     new LoadInstruction(dst1, addr, bb);
                     
@@ -338,10 +330,8 @@ void Id::genCode()
                 }
                 //如果维度遍历结束 将对应数组值传递到dst 然后退出
                 if (!idx) {
-                    Operand* dst1 = new Operand(new TemporarySymbolEntry(
-                        new PointerType(type), SymbolTable::getLabel()));
-                    Operand* idx = new Operand(
-                        new ConstantSymbolEntry(TypeSystem::intType, 0));
+                    Operand* dst1 = new Operand(new TemporarySymbolEntry( new PointerType(type), SymbolTable::getLabel()));
+                    Operand* idx = new Operand( new ConstantSymbolEntry(TypeSystem::intType, 0));
                     new GepInstruction(dst1, tempSrc, idx, bb);
                     tempDst = dst1;
                     pointer = true;
@@ -350,8 +340,7 @@ void Id::genCode()
                 //生成维度
                 idx->genCode();
                 //用于维度寻址 将tempSrc[idx]的值加载到tempDst
-                auto gep = new GepInstruction(tempDst, tempSrc,
-                                              idx->getOperand(), bb, flag);
+                auto gep = new GepInstruction(tempDst, tempSrc, idx->getOperand(), bb, flag);
                 //如果当前不是a[][3]这种情况
                 //并且是第一个维度寻址
                 if (!flag && firstFlag) 
@@ -368,8 +357,7 @@ void Id::genCode()
                 type = ((ArrayType*)type)->getElementType();
                 type1 = ((ArrayType*)type1)->getElementType();
                 tempSrc = tempDst;
-                tempDst = new Operand(new TemporarySymbolEntry(
-                    new PointerType(type), SymbolTable::getLabel()));
+                tempDst = new Operand(new TemporarySymbolEntry( new PointerType(type), SymbolTable::getLabel()));
                 idx = (ExprNode*)(idx->getNext());
             }
             dst = tempDst;
@@ -377,8 +365,7 @@ void Id::genCode()
             // 如果此ID是右值 需要再次load
             if (!left && !pointer) 
             {
-                Operand* dst1 = new Operand(new TemporarySymbolEntry(
-                    TypeSystem::intType, SymbolTable::getLabel()));
+                Operand* dst1 = new Operand(new TemporarySymbolEntry( TypeSystem::intType, SymbolTable::getLabel()));
                 new LoadInstruction(dst1, dst, bb);
                 dst = dst1;
             }
@@ -389,10 +376,9 @@ void Id::genCode()
         {
             if (((ArrayType*)(this->type))->getLength() == -1) 
             {
-                Operand* dst1 = new Operand(new TemporarySymbolEntry(
-                    new PointerType(
-                        ((ArrayType*)(this->type))->getElementType()),
-                    SymbolTable::getLabel()));
+                Operand* dst1 = new Operand(
+                    new TemporarySymbolEntry( 
+                        new PointerType(((ArrayType*)(this->type))->getElementType()), SymbolTable::getLabel()));
                 new LoadInstruction(dst1, addr, bb);
                 dst = dst1;
             } 
@@ -442,6 +428,10 @@ IfStmt::IfStmt(ExprNode *cond, StmtNode *thenStmt) : cond(cond), thenStmt(thenSt
             this->cond = temp;
         }
         if(t->isFunc()&&((FunctionType*)t)->getRetType()->isInt()){
+            Int2BoolExpr* temp = new Int2BoolExpr(cond);
+            this->cond = temp;
+        }
+        if(t->isArray()){
             Int2BoolExpr* temp = new Int2BoolExpr(cond);
             this->cond = temp;
         }
@@ -679,10 +669,8 @@ void UnaryExpr::genCode()
         BasicBlock *falsebb = new BasicBlock(func);
         BasicBlock *tempbb = new BasicBlock(func);
         Instruction* temp = new CondBrInstruction(truebb,tempbb,dst,bb);
-        //this->falseList().push_back(temp);
         this->trueList().push_back(temp);
         temp=new UncondBrInstruction(falsebb, tempbb);
-        //this->trueList().push_back(temp);
         this->falseList().push_back(temp);
     } 
     else if (op == SUB || op == ADD) 
@@ -930,7 +918,6 @@ void DeclStmt::typeCheck(Type* retType)
         if(ids->assignlist.size() > 0 && ids->assignlist[j] != nullptr){
             ids -> assignlist[j] -> typeCheck();
         }
-        //存疑
     }
 }
 
@@ -1060,12 +1047,6 @@ void Id::output(int level)
     {
         fprintf(yyout, "value: %d\n", value);
     }
-    /*
-    else
-    {
-        fprintf(yyout, "value: uninitialized\n");
-    }
-    */
 }
 
 CallExpr::CallExpr(SymbolEntry *se, ExprNode *param /*=NULL*/) : ExprNode(se), param(param)
@@ -1082,23 +1063,12 @@ CallExpr::CallExpr(SymbolEntry *se, ExprNode *param /*=NULL*/) : ExprNode(se), p
     int paramsize=type->paramsType.size();
 
     this->type=((FunctionType*)s->getType())->getRetType();
-    // std::vector<Type *> params;
-    // while (s)
-    // {
-    //     Type *type = s->getType();
-    //     params.push_back(type);
-    //     s = s->getNext();
-    // }
-    if (paramnum == paramsize)
-    {
-        // this->symbolEntry = s;
-    }
+    if (paramnum == paramsize){}
     else
     {
         fprintf(stderr, "函数 \'%s\'有%d个参数，但在调用时传了%d个。\n", se->toStr().c_str(), paramsize,int(paramnum));
         exit(EXIT_FAILURE);
     }
-    //params.clear();
 };
 
 void ExprStmt::output(int level)
@@ -1222,7 +1192,6 @@ void ContinueStmt::output(int level)
 }
 
 int UnaryExpr::getValue(){
-    // lab7todo
     int value = 0;
     switch(op)      /* enum {ADD, SUB, NOT}; */
     {
@@ -1240,12 +1209,10 @@ int UnaryExpr::getValue(){
 }
 
 int CallExpr::getValue(){
-    // lab7todo
     return 0;
 }
 
 int BinaryExpr::getValue(){
-    // lab7todo
     int value=0;
     int value1=expr1->getValue();
     int value2=expr2->getValue();

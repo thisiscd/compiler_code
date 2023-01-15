@@ -249,21 +249,6 @@ StoreMInstruction::StoreMInstruction(MachineBlock* p,
 void StoreMInstruction::output()
 {
     // TODO
-    MachineOperand* operand = use_list[0];
-    if (operand->isReg() && operand->getReg() == 3) {
-        if(reg3){
-            reg3 = false;
-        }
-        else{
-            auto fp = new MachineOperand(MachineOperand::REG, 11);
-            auto r3 = new MachineOperand(MachineOperand::REG, 3);
-            auto off = new MachineOperand(MachineOperand::IMM, fpStkOffset);
-            fpStkOffset += 4;
-            auto cur_inst = new LoadMInstruction(parent, r3, fp, off);
-            cur_inst->output();
-        }
-    }
-
     fprintf(yyout, "\tstr ");
     this->use_list[0]->output();
     fprintf(yyout, ", ");
@@ -437,14 +422,9 @@ MachineFunction::MachineFunction(MachineUnit* p, SymbolEntry* sym_ptr)
 
 void MachineBlock::output()
 {
-    fpStkOffset = (parent->getSavedRegs().size() + 2) * 4;
-    reg3 = true;
-
     fprintf(yyout, ".L%d:\n", this->no);
     for(auto iter : inst_list)
-    {
         iter->output();
-    }
 }
 //获得整数vector代表的寄存器信息
 std::vector<MachineOperand*> MachineFunction::getSavedRegs() 
@@ -483,20 +463,6 @@ void MachineFunction::output()
     cur_inst=new BinaryMInstruction(nullptr, BinaryMInstruction::SUB, sp, sp, new MachineOperand(MachineOperand::IMM, AllocSpace(0)));
     cur_inst->output();
 
-    // int offset=AllocSpace(0);
-    // if(offset!=0){
-    //     MachineOperand* size = new MachineOperand(MachineOperand::IMM, offset);
-    //     if (offset < -255 || offset > 255) {//偏移量太大
-    //         MachineOperand* r4 = new MachineOperand(MachineOperand::REG, 4);
-    //         cur_inst=new LoadMInstruction(nullptr, r4, size);
-    //         cur_inst->output();
-    //         cur_inst=new BinaryMInstruction(nullptr, BinaryMInstruction::SUB, sp, sp,r4);
-    //         cur_inst->output();
-    //     } else {
-    //         cur_inst=new BinaryMInstruction(nullptr, BinaryMInstruction::SUB, sp, sp, size);
-    //         cur_inst->output();
-    //     }
-    // }
     for(auto iter : block_list)
         iter->output();
     fprintf(yyout, "\n");

@@ -133,12 +133,18 @@ public:
                     Int2BoolExpr* temp = new Int2BoolExpr(expr1);
                     this->expr1 = temp;
                 }
-                //std::cout<<"t->toStr()"<<std::endl;
+                else if(expr1->getType()->isArray()){
+                    Int2BoolExpr* temp = new Int2BoolExpr(expr1);
+                    this->expr1 = temp;
+                }
                 if (expr2->getType()->isInt() && expr2->getType()->getSize() == 32){
                     Int2BoolExpr* temp = new Int2BoolExpr(expr2);
                     this->expr2 = temp;
                 }
-                
+                else if(expr2->getType()->isArray()){
+                    Int2BoolExpr* temp = new Int2BoolExpr(expr2);
+                    this->expr2 = temp;
+                }
             }
         } 
         else{
@@ -208,7 +214,6 @@ public:
 
     void output(int level);
     void typeCheck(Type* retType=nullptr);
-    //void typeCheck();
     void genCode();
 };
 
@@ -312,7 +317,11 @@ public:
             Int2BoolExpr* temp = new Int2BoolExpr(cond);
             this->cond = temp;
         }
-        if(t->isFunc()&&((FunctionType*)t)->getRetType()->isInt()){
+        else if(t->isFunc()&&((FunctionType*)t)->getRetType()->isInt()){
+            Int2BoolExpr* temp = new Int2BoolExpr(cond);
+            this->cond = temp;
+        }
+        else if(t->isArray()){
             Int2BoolExpr* temp = new Int2BoolExpr(cond);
             this->cond = temp;
         }
@@ -333,12 +342,17 @@ public:
     BasicBlock* end_bb=nullptr;
     WhileStmt(ExprNode *cond, StmtNode *Stmt) : cond(cond), Stmt(Stmt) {
         Type* t = cond->getSymPtr()->getType();
+        //std::cout<<t->isArray()<<std::endl;
         if (t->isInt() && ((IntType*) t)->getSize() == 32) 
         {
             Int2BoolExpr* temp = new Int2BoolExpr(cond);
             this->cond = temp;
         }
-        if(t->isFunc()&&((FunctionType*)t)->getRetType()->isInt()){
+        else if(t->isFunc()&&((FunctionType*)t)->getRetType()->isInt()){
+            Int2BoolExpr* temp = new Int2BoolExpr(cond);
+            this->cond = temp;
+        }
+        else if(t->isArray()){
             Int2BoolExpr* temp = new Int2BoolExpr(cond);
             this->cond = temp;
         }

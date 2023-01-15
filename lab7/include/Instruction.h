@@ -183,7 +183,6 @@ class XorInstruction:public Instruction
 };
  
 // 数组寻址
-
 class GepInstruction : public Instruction 
 {
 private:
